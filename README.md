@@ -31,15 +31,15 @@ Z-Image 生图小站是一个简单的 Web 界面，用于通过 ComfyUI 生成 
 
 3. 确保 ComfyUI 已安装并运行在 `http://127.0.0.1:8188`。
 
-4. 修改 `app.py` 中的 `COMFYUI_OUTPUT_DIR` 路径指向你的 ComfyUI 输出目录。
+4. 修改 `app/app.py` 中的 `COMFYUI_OUTPUT_DIR` 路径指向你的 ComfyUI 输出目录。
 
-5. 确保 `z_image_turbo.json` 文件在项目目录下。
+5. 确保 `config/z_image_turbo.json` 工作流文件在项目目录下。
 
 ## 使用方法
 
 1. 启动 Flask 应用：
    ```
-   python app.py
+   python run.py
    ```
 
 2. 在浏览器中访问 `http://localhost:5000`。
@@ -54,15 +54,23 @@ Z-Image 生图小站是一个简单的 Web 界面，用于通过 ComfyUI 生成 
 
 - **COMFYUI_API_URL**: ComfyUI API 地址，默认 `http://127.0.0.1:8188`
 - **COMFYUI_OUTPUT_DIR**: ComfyUI 输出目录路径，需要根据你的实际路径调整
-- **workflows**: 工作流模板文件 `z_image_turbo.json`
+- **workflows**: 工作流模板文件 `config/z_image_turbo.json`
 
 ## 文件结构
 
-- `app.py`: Flask 后端应用
-- `index.html`: 前端用户界面
-- `script.js`: 前端 JavaScript 逻辑
-- `z_image_turbo.json`: ComfyUI 工作流配置
-- `requirements.txt`: Python 依赖
+```
+fast_image/
+├── app/
+│   └── app.py               # Flask 后端应用
+├── static/
+│   ├── index.html           # 前端用户界面
+│   └── script.js           # 前端 JavaScript 逻辑
+├── config/
+│   └── z_image_turbo.json   # ComfyUI 工作流配置
+├── run.py                   # 应用启动脚本
+├── requirements.txt         # Python 依赖
+└── README.md                # 项目说明
+```
 
 ## 许可证
 

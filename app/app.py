@@ -5,20 +5,24 @@ import time
 import os
 from flask import Flask, request, jsonify, send_from_directory
 
-app = Flask(__name__, static_folder='.')
+BASE_DIR = os.path.dirname(__file__)
+STATIC_DIR = os.path.join(BASE_DIR, '..', 'static')
+CONFIG_DIR = os.path.join(BASE_DIR, '..', 'config')
+
+app = Flask(__name__, static_folder='../static')
 
 # --- 配置 ---
 COMFYUI_API_URL = "http://127.0.0.1:8188"
 # !!! 重要: 请将此路径修改为你 ComfyUI 的实际输出目录 !!!
 # 通常是在 ComfyUI 文件夹下的 'output' 文件夹
 # 如果你的 app.py 和 ComfyUI 文件夹在同一级目录，路径可能如下：
-COMFYUI_OUTPUT_DIR = r"../../comfyui/output" 
+COMFYUI_OUTPUT_DIR = r"../../../comfyui/output" 
 # 使用 r"" 可以避免 Windows 路径中的反斜杠问题
 
 # 加载工作流模板
 # 注意：现在我们使用的是 API 格式的 JSON 文件
 try:
-    with open('z_image_turbo.json', 'r', encoding='utf-8') as f:
+    with open(os.path.join(CONFIG_DIR, 'z_image_turbo.json'), 'r', encoding='utf-8') as f:
         workflow_template = json.load(f)
 except FileNotFoundError:
     print("错误: z_image_turbo.json 文件未找到。请确保它在正确的目录下。")
@@ -26,11 +30,11 @@ except FileNotFoundError:
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 @app.route('/script.js')
 def script_js():
-    return send_from_directory('.', 'script.js')
+    return send_from_directory(STATIC_DIR, 'script.js')
 
 @app.route('/generate', methods=['POST'])
 def generate_image():
