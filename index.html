@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Image 生图小站</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f4f9; color: #333; max-width: 600px; margin: 2rem auto; padding: 1rem; }
+        h1, h2 { text-align: center; }
+        .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input[type="text"], input[type="number"], select, textarea { 
+            width: 100%; 
+            padding: 0.5rem; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            box-sizing: border-box; /* 确保 padding 不会影响宽度 */
+            font-family: inherit; /* 继承字体 */
+        }
+        /* 为 textarea 添加一些样式 */
+        textarea {
+            resize: vertical; /* 允许用户垂直调整大小 */
+            min-height: 100px; /* 设置最小高度 */
+        }
+        .options-group { display: flex; gap: 1rem; }
+        .options-group .form-group { flex: 1; }
+        button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+        button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        #result-image { max-width: 100%; margin-top: 2rem; border-radius: 8px; display: none; }
+        #loading { text-align: center; margin-top: 1rem; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Z-Image 生图小站</h1>
+        <form id="generate-form">
+            <div class="form-group">
+                <label for="prompt">提示词:</label>
+                <!-- 
+                  *** 关键改动在这里 ***
+                  将 <input type="text"> 替换为了 <textarea>
+                  - id, name, required 属性保持不变
+                  - 增加了 rows 属性来控制默认显示的行数
+                  - 默认文本放在标签之间
+                -->
+                <textarea id="prompt" name="prompt" rows="4" required>一只橘猫和一只虎斑狸花猫在草坪上玩耍</textarea>
+            </div>
+            
+            <div class="options-group">
+                <div class="form-group">
+                    <label for="width">宽度:</label>
+                    <select id="width" name="width">
+                        <option value="512">512</option>
+                        <option value="768">768</option>
+                        <option value="1024" selected>1024</option>
+                        <option value="1280">1280</option>
+                        <option value="1536">1536</option>
+                        <option value="1792">1792</option>
+                        <option value="2048">2048</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="height">高度:</label>
+                    <select id="height" name="height">
+                        <option value="512">512</option>
+                        <option value="768">768</option>
+                        <option value="1024" selected>1024</option>
+                        <option value="1280">1280</option>
+                        <option value="1536">1536</option>
+                        <option value="1792">1792</option>
+                        <option value="2048">2048</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="seed">种子:</label>
+                <input type="number" id="seed" name="seed" placeholder="留空则使用随机种子">
+            </div>
+
+            <button type="submit" id="generate-btn">生成图片</button>
+        </form>
+        <div id="loading">正在生成中，请稍候...</div>
+        <img id="result-image" src="" alt="Generated Image">
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
