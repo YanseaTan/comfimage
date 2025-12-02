@@ -3,6 +3,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const resultImage = document.getElementById('result-image');
     const loadingDiv = document.getElementById('loading');
+    const historyContainer = document.getElementById('history-container');
+
+    // 存储历史记录的数组
+    let generationHistory = [];
+
+    // 更新历史记录显示
+    function updateHistory() {
+        historyContainer.innerHTML = '';
+        generationHistory.forEach((item, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.style.border = '1px solid #ccc';
+            historyItem.style.padding = '1rem';
+            historyItem.style.marginBottom = '1rem';
+            historyItem.style.borderRadius = '8px';
+
+            const thumb = document.createElement('img');
+            thumb.src = item.image_url;
+            thumb.alt = `Generated Image ${index + 1}`;
+            thumb.style.maxWidth = '200px';
+            thumb.style.borderRadius = '4px';
+            thumb.style.cursor = 'pointer';
+            thumb.onclick = () => {
+                resultImage.src = item.image_url;
+                resultImage.style.display = 'block';
+                // 回填参数
+                document.getElementById('prompt').value = item.prompt;
+                document.getElementById('width').value = item.width;
+                document.getElementById('height').value = item.height;
+                document.getElementById('seed').value = item.seed || '';
+            };
+
+            const params = document.createElement('div');
+            params.style.marginTop = '0.5rem';
+            params.innerHTML = `<strong>提示词:</strong> ${item.prompt}<br>
+                                <strong>尺寸:</strong> ${item.width}x${item.height}<br>
+                                <strong>种子:</strong> ${item.seed || '随机'}`;
+
+            historyItem.appendChild(thumb);
+            historyItem.appendChild(params);
+            historyContainer.appendChild(historyItem);
+        });
+    }
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -40,10 +83,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            
+
             // 显示图片
             resultImage.src = data.image_url;
             resultImage.style.display = 'block';
+
+            // 添加到历史记录
+            generationHistory.unshift({
+                prompt: prompt,
+                width: width,
+                height: height,
+                seed: seed,
+                image_url: data.image_url
+            });
+
+            // 更新历史显示
+            updateHistory();
 
         } catch (error) {
             alert(`生成失败: ${error.message}`);
