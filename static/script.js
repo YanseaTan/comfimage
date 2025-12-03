@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultImage = document.getElementById('result-image');
     const loadingDiv = document.getElementById('loading');
     const historyContainer = document.getElementById('history-container');
+    const modal = document.getElementById('image-modal');
+    const modalImg = document.getElementById('modal-image');
+    const closeBtn = document.getElementById('close-modal');
 
     // 存储历史记录的数组
     let generationHistory = [];
@@ -129,4 +132,22 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingDiv.style.display = 'none';
         }
     });
+
+    // 点击result-image打开全屏模态框
+    resultImage.onclick = function() {
+        modal.style.display = "block";
+        modalImg.src = this.src;
+    }
+
+    // 点击关闭按钮隐藏模态框
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    // 点击模态框背景隐藏模态框
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    }
 });
