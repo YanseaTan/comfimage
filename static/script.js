@@ -18,6 +18,24 @@ document.addEventListener('DOMContentLoaded', () => {
             historyItem.style.padding = '1rem';
             historyItem.style.marginBottom = '1rem';
             historyItem.style.borderRadius = '8px';
+            historyItem.style.position = 'relative';
+
+            // 删除按钮
+            const deleteBtn = document.createElement('span');
+            deleteBtn.textContent = '×';
+            deleteBtn.style.position = 'absolute';
+            deleteBtn.style.top = '0.5rem';
+            deleteBtn.style.right = '0.5rem';
+            deleteBtn.style.color = 'gray';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.fontSize = '1.5rem';
+            deleteBtn.style.fontWeight = 'bold';
+            deleteBtn.onclick = () => {
+                if (confirm('确定要删除此记录吗？')) {
+                    generationHistory.splice(index, 1);
+                    updateHistory();
+                }
+            };
 
             const thumb = document.createElement('img');
             thumb.src = item.image_url;
@@ -41,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <strong>尺寸:</strong> ${item.width}x${item.height}<br>
                                 <strong>种子:</strong> ${item.seed || '随机'}`;
 
+            historyItem.appendChild(deleteBtn);
             historyItem.appendChild(thumb);
             historyItem.appendChild(params);
             historyContainer.appendChild(historyItem);
