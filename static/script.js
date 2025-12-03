@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-image');
     const closeBtn = document.getElementById('close-modal');
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
 
     // 存储历史记录的数组
     let generationHistory = [];
@@ -149,5 +151,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === modal) {
             modal.style.display = "none";
         }
+    }
+
+    // 复制图片
+    copyBtn.onclick = async function() {
+        if (!navigator.clipboard || !window.ClipboardItem) {
+            alert('浏览器不支持复制图片功能，请使用下载功能或升级浏览器');
+            return;
+        }
+        try {
+            const response = await fetch(modalImg.src);
+            const blob = await response.blob();
+            await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+            alert('已复制');
+        } catch (error) {
+            alert('复制失败：' + error.message);
+        }
+    }
+
+    // 下载图片
+    downloadBtn.onclick = function() {
+        const link = document.createElement('a');
+        link.href = modalImg.src;
+        link.download = modalImg.src.split('/').pop() || 'generated_image.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 });

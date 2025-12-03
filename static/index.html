@@ -36,6 +36,10 @@
         .modal-content { margin: auto; display: block; width: auto; max-width: 90%; max-height: 90%; position: relative; top: 50%; transform: translateY(-50%); }
         .close { position: absolute; top: 20px; right: 35px; color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer; }
         .close:hover, .close:focus { color: #bbb; text-decoration: none; }
+        .action-btn { position: absolute; top: 30px; color: #f1f1f1; font-size: 18px; cursor: pointer; padding: 5px; }
+        .action-btn:hover { color: #bbb; }
+        #copy-btn { right: 140px; }
+        #download-btn { right: 90px; }
     </style>
 </head>
 <body>
@@ -102,6 +106,8 @@
     <!-- 全屏图片模态框 -->
     <div id="image-modal" class="modal">
         <span class="close" id="close-modal">&times;</span>
+        <span class="action-btn" id="copy-btn" title="复制图片">复制</span>
+        <span class="action-btn" id="download-btn" title="下载图片">下载</span>
         <img class="modal-content" id="modal-image">
     </div>
 
