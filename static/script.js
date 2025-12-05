@@ -9,6 +9,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('close-modal');
     const copyBtn = document.getElementById('copy-btn');
     const downloadBtn = document.getElementById('download-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // 从localStorage加载主题
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    }
+
+    // 主题切换
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'dark') {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.removeItem('theme');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        }
+    });
 
     // 存储历史记录的数组
     let generationHistory = [];
@@ -19,10 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         generationHistory.forEach((item, index) => {
             const historyItem = document.createElement('div');
             historyItem.className = 'history-item';
-            historyItem.style.border = '1px solid #ccc';
-            historyItem.style.padding = '1rem';
-            historyItem.style.marginBottom = '1rem';
-            historyItem.style.borderRadius = '8px';
             historyItem.style.position = 'relative';
 
             // 删除按钮
@@ -155,18 +170,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 复制图片
     copyBtn.onclick = async function() {
-        if (!navigator.clipboard || !window.ClipboardItem) {
-            alert('浏览器不支持复制图片功能，请使用下载功能或升级浏览器');
-            return;
-        }
         try {
-            const response = await fetch(modalImg.src);
-            const blob = await response.blob();
-            await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-            alert('已复制');
+            // 尝试复制图片blob（现代浏览器支持）
+            if (navigator.clipboard && window.ClipboardItem) {
+                const response = await fetch(modalImg.src);
+                const blob = await response.blob();
+                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                showCopyToast('图片已复制');
+            } else if (navigator.clipboard) {
+                // 后备方法：复制图片URL到文本剪贴板
+                await navigator.clipboard.writeText(modalImg.src);
+                showCopyToast('图片URL已复制');
+            } else {
+                // 兼容老浏览器：使用execCommand复制URL
+                const textArea = document.createElement('textarea');
+                textArea.value = modalImg.src;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopyToast('图片URL已复制');
+            }
         } catch (error) {
-            alert('复制失败：' + error.message);
+            alert('复制失败：' + error.message + '。请尝试升级浏览器或使用下载功能。');
         }
+
+    function showCopyToast(message) {
+        const toast = document.createElement('span');
+        toast.textContent = message;
+        toast.className = 'copy-toast';
+        toast.style.top = '30px';
+        toast.style.right = '200px'; // 在复制按钮旁边
+        document.getElementById('image-modal').appendChild(toast);
+        // 动画结束后移除
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
+    }
     }
 
     // 下载图片

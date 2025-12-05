@@ -5,19 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Z-Image 生图小站</title>
     <style>
-        body { font-family: sans-serif; background-color: #f4f4f9; color: #333; max-width: 600px; margin: 2rem auto; padding: 1rem; }
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --card-bg: white;
+            --shadow: rgba(0,0,0,0.1);
+            --border-color: #ccc;
+            --button-bg: #007bff;
+            --disabled-bg: #a0a0a0;
+            --theme-icon: '☀️';
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2a2a2a;
+            --shadow: rgba(255,255,255,0.1);
+            --border-color: #555;
+            --button-bg: #007bff;
+            --disabled-bg: #505050;
+            --theme-icon: '🌙';
+        }
+
+        body { font-family: sans-serif; background-color: var(--bg-color); color: var(--text-color); max-width: 600px; margin: 2rem auto; padding: 1rem; }
         h1, h2 { text-align: center; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .title {
+            text-align: left;
+            margin: 0;
+        }
         .container { display: flex; flex-direction: column; gap: 2rem; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card { background: var(--card-bg); padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px var(--shadow); }
         .form-group { margin-bottom: 1rem; }
         label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
         input[type="text"], input[type="number"], select, textarea {
             width: 100%;
             padding: 0.5rem;
-            border: 1px solid #ccc;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             box-sizing: border-box; /* 确保 padding 不会影响宽度 */
             font-family: inherit; /* 继承字体 */
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
         /* 为 textarea 添加一些样式 */
         textarea {
@@ -26,10 +61,49 @@
         }
         .options-group { display: flex; gap: 1rem; }
         .options-group .form-group { flex: 1; }
-        button { width: 100%; padding: 0.75rem; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-        button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        button { width: 100%; padding: 0.75rem; background-color: var(--button-bg); color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
+        button:disabled { background-color: var(--disabled-bg); cursor: not-allowed; }
         #result-image { max-width: 100%; margin: 2rem auto 0; border-radius: 8px; display: none; cursor: pointer; }
         #loading { text-align: center; margin-top: 1rem; display: none; }
+
+    /* 主题切换开关 */
+        #theme-toggle {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: none;
+        }
+        #theme-toggle::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+            z-index: 1;
+        }
+        #theme-toggle::after {
+            content: var(--theme-icon);
+            position: absolute;
+            left: -30px;
+            top: 2px;
+            font-size: 16px;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        }
+        [data-theme="dark"] #theme-toggle {
+            background-color: var(--button-bg);
+        }
+        [data-theme="dark"] #theme-toggle::before {
+            transform: translateX(26px);
+        }
 
         /* 全屏显示模态框 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.9); }
@@ -40,10 +114,42 @@
         .action-btn:hover { color: #bbb; }
         #copy-btn { right: 140px; }
         #download-btn { right: 90px; }
+
+        /* 历史记录样式 */
+        .history-item {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        /* 复制提示动画 */
+        .copy-toast {
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            position: absolute;
+            z-index: 1001;
+            opacity: 0;
+            animation: fadeInOut 2s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
     </style>
 </head>
 <body>
-    <h1>Z-Image 生图小站</h1>
+    <header class="header">
+        <h1 class="title">Z-Image 生图小站</h1>
+        <button id="theme-toggle" title="切换主题"></button>
+    </header>
     <div class="container">
         <div class="card">
             <form id="generate-form">
