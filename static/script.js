@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('generate-form');
     const generateBtn = document.getElementById('generate-btn');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
     const resultImage = document.getElementById('result-image');
     const loadingDiv = document.getElementById('loading');
     const historyContainer = document.getElementById('history-container');
@@ -31,6 +34,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 存储历史记录的数组
     let generationHistory = [];
+
+    // 进度条相关变量
+    let progressInterval = null;
+
+    // 更新进度条显示的函数
+    function updateProgress(percent) {
+        progressBar.style.width = percent + '%';
+        progressText.textContent = Math.round(percent) + '%';
+    }
+
+    // 启动进度条动画
+    function startProgress() {
+        let percent = 0;
+        progressInterval = setInterval(() => {
+            // 模拟进度增长：前90%较快，最后10%等待实际完成
+            if (percent < 90) {
+                percent += Math.random() * 5; // 每次增加0-5%
+                if (percent > 90) percent = 90;
+            }
+            updateProgress(percent);
+        }, 500);
+    }
+
+    // 停止进度条并完成
+    function completeProgress() {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        updateProgress(100);
+        // 短暂延时后切换回按钮
+        setTimeout(() => {
+            progressContainer.style.display = 'none';
+            generateBtn.style.display = 'block';
+        }, 500);
+    }
 
     // 更新历史记录显示
     function updateHistory() {
@@ -95,11 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const height = document.getElementById('height').value;
         const seed = document.getElementById('seed').value;
 
-        // UI 状态更新
-        generateBtn.disabled = true;
-        generateBtn.textContent = '生成中...';
+        // UI 状态更新：隐藏按钮，显示进度条
+        generateBtn.style.display = 'none';
+        progressContainer.style.display = 'block';
         loadingDiv.style.display = 'block';
         resultImage.style.display = 'none';
+
+        // 重置并启动进度条
+        updateProgress(0);
+        startProgress();
 
         try {
             const response = await fetch('/generate', {
@@ -139,13 +182,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // 更新历史显示
             updateHistory();
 
+            // 完成进度条
+            completeProgress();
+
         } catch (error) {
             alert(`生成失败: ${error.message}`);
             console.error('Error:', error);
+            // 停止进度条并显示按钮
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            progressContainer.style.display = 'none';
+            generateBtn.style.display = 'block';
         } finally {
-            // 恢复 UI 状态
-            generateBtn.disabled = false;
-            generateBtn.textContent = '生成图片';
+            // 恢复其他UI状态
             loadingDiv.style.display = 'none';
         }
     });
