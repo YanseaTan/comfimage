@@ -85,6 +85,10 @@ def index():
 def script_js():
     return send_from_directory(STATIC_DIR, 'script.js')
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(STATIC_DIR, 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate_image():
