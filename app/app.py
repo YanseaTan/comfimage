@@ -3,13 +3,30 @@ import random
 import requests
 import time
 import os
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = os.path.dirname(__file__)
 STATIC_DIR = os.path.join(BASE_DIR, '..', 'static')
 CONFIG_DIR = os.path.join(BASE_DIR, '..', 'config')
 
 app = Flask(__name__, static_folder='../static')
+app.secret_key = 'your-secret-key-here'  # 用于session，请更改为复杂密钥
+
+# 初始化 HTTPAuth
+auth = HTTPBasicAuth()
+
+# 硬编码用户示例 (生产环境使用数据库)
+users = {
+    "admin": generate_password_hash("password"),
+    "user1": generate_password_hash("pass1")
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and check_password_hash(users.get(username), password):
+        return username
 
 # --- 配置 ---
 COMFYUI_API_URL = "http://127.0.0.1:8188"
@@ -28,6 +45,38 @@ except FileNotFoundError:
     print("错误: z_image_turbo.json 文件未找到。请确保它在正确的目录下。")
     workflow_template = None
 
+def login_required(func):
+    """装饰器：检查用户是否登录"""
+    from functools import wraps
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return jsonify({"error": "未登录"}), 401
+        return func(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['POST'])
+def login():
+    """处理登录"""
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    if verify_password(username, password):
+        session['user'] = username
+        return jsonify({"message": "登录成功"})
+    return jsonify({"error": "用户名或密码错误"}), 401
+
+@app.route('/logout')
+def logout():
+    """处理登出"""
+    session.pop('user', None)
+    return redirect(url_for('index'))
+
+@app.route('/auth-status')
+def auth_status():
+    """检查登录状态"""
+    return jsonify({"logged_in": 'user' in session, "user": session.get('user')})
+
 @app.route('/')
 def index():
     return send_from_directory(STATIC_DIR, 'index.html')
@@ -37,6 +86,7 @@ def script_js():
     return send_from_directory(STATIC_DIR, 'script.js')
 
 @app.route('/generate', methods=['POST'])
+@login_required
 def generate_image():
     if not workflow_template:
         return jsonify({"error": "服务器端工作流模板未加载"}), 500
@@ -123,6 +173,7 @@ def generate_image():
 
 # *** 新增：用于提供图片服务的路由 ***
 @app.route('/image/<path:subpath>')
+@login_required
 def serve_image(subpath):
     """
     从 ComfyUI 的输出目录中提供图片文件。
@@ -139,4 +190,4 @@ def serve_image(subpath):
 
 if __name__ == '__main__':
     # 确保监听所有网络接口
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

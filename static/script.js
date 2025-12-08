@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const loginContainer = document.getElementById('login-container');
+    const mainContainer = document.getElementById('main-container');
+    const loginForm = document.getElementById('login-form');
+    const userInfo = document.getElementById('user-info');
     const form = document.getElementById('generate-form');
     const generateBtn = document.getElementById('generate-btn');
     const progressContainer = document.getElementById('progress-container');
@@ -13,6 +17,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById('copy-btn');
     const downloadBtn = document.getElementById('download-btn');
     const themeToggle = document.getElementById('theme-toggle');
+
+    // 检查认证状态
+    function checkAuthStatus() {
+        fetch('/auth-status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.logged_in) {
+                    loginContainer.style.display = 'none';
+                    mainContainer.style.display = 'flex';
+                    userInfo.textContent = data.user;
+                } else {
+                    loginContainer.style.display = 'flex';
+                    mainContainer.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Auth check failed:', error);
+                loginContainer.style.display = 'flex';
+                mainContainer.style.display = 'none';
+            });
+    }
+
+    // 处理登录表单
+    loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('login-password').value;
+
+        // 清除之前的错误信息
+        document.getElementById('login-error').style.display = 'none';
+
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (response.ok) {
+                checkAuthStatus(); // 重新检查状态并自动切换到主界面
+            } else {
+                const data = await response.json();
+                document.getElementById('login-error').textContent = data.error;
+                document.getElementById('login-error').style.display = 'block';
+            }
+        } catch (error) {
+            document.getElementById('login-error').textContent = '登录失败: ' + error.message;
+            document.getElementById('login-error').style.display = 'block';
+        }
+    });
+
+    // 初始化
+    checkAuthStatus();
 
     // 从localStorage加载主题
     const savedTheme = localStorage.getItem('theme');
