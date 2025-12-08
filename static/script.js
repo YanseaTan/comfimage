@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainContainer = document.getElementById('main-container');
     const loginForm = document.getElementById('login-form');
     const userInfo = document.getElementById('user-info');
+    const logoutLink = document.getElementById('logout-link');
     const form = document.getElementById('generate-form');
     const generateBtn = document.getElementById('generate-btn');
     const progressContainer = document.getElementById('progress-container');
@@ -27,15 +28,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     loginContainer.style.display = 'none';
                     mainContainer.style.display = 'flex';
                     userInfo.textContent = data.user;
+                    userInfo.style.display = 'inline';
+                    logoutLink.style.display = 'inline';
                 } else {
                     loginContainer.style.display = 'flex';
                     mainContainer.style.display = 'none';
+                    userInfo.style.display = 'none';
+                    logoutLink.style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('Auth check failed:', error);
                 loginContainer.style.display = 'flex';
                 mainContainer.style.display = 'none';
+                userInfo.style.display = 'none';
+                logoutLink.style.display = 'none';
             });
     }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-Image 生图小站</title>
+    <title>Comfimage</title>
     <style>
         :root {
             --bg-color: #f4f4f9;
@@ -36,9 +36,19 @@
             align-items: center;
             margin-bottom: 2rem;
         }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #user-info, #logout-link {
+            display: none;
+        }
         .title {
             text-align: left;
             margin: 0;
+            font-family:'Times New Roman', Times, serif;
+            font-style: italic;
         }
         .container { display: flex; flex-direction: column; gap: 2rem; }
         .card { background: var(--card-bg); padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px var(--shadow); }
@@ -177,8 +187,12 @@
 </head>
 <body>
     <header class="header">
-        <h1 class="title">Z-Image 生图小站</h1>
-        <button id="theme-toggle" title="切换主题"></button>
+        <h1 class="title">Comfimage</h1>
+        <div class="header-right">
+            <button id="theme-toggle" title="切换主题"></button>
+            <span id="user-info"></span>
+            <a href="/logout" id="logout-link">登出</a>
+        </div>
     </header>
 
     <!-- 登录表单 -->
@@ -202,9 +216,6 @@
 
     <!-- 生图界面 -->
     <div id="main-container" class="container" style="display: none;">
-        <div class="card">
-            <h2>欢迎, <span id="user-info"></span> <a href="/logout" id="logout-link" style="float: right;">登出</a></h2>
-        </div>
         <div class="card">
             <form id="generate-form">
                 <div class="form-group">
