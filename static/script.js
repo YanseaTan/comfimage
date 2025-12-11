@@ -1,9 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 使用动态注入的base路径
+    const baseUrl = window.BASE_PATH || '';
+
     const loginContainer = document.getElementById('login-container');
     const mainContainer = document.getElementById('main-container');
     const loginForm = document.getElementById('login-form');
     const userInfo = document.getElementById('user-info');
     const logoutLink = document.getElementById('logout-link');
+
+    // 设置登出链接
+    logoutLink.href = baseUrl + '/logout';
     const form = document.getElementById('generate-form');
     const generateBtn = document.getElementById('generate-btn');
     const progressContainer = document.getElementById('progress-container');
@@ -21,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 检查认证状态
     function checkAuthStatus() {
-        fetch('/auth-status')
+        fetch(baseUrl + '/auth-status')
             .then(response => response.json())
             .then(data => {
                 if (data.logged_in) {
@@ -56,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('login-error').style.display = 'none';
 
         try {
-            const response = await fetch('/login', {
+            const response = await fetch(baseUrl + '/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -211,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startProgress();
 
         try {
-            const response = await fetch('/generate', {
+            const response = await fetch(baseUrl + '/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

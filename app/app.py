@@ -11,6 +11,9 @@ BASE_DIR = os.path.dirname(__file__)
 STATIC_DIR = os.path.join(BASE_DIR, '..', 'static')
 CONFIG_DIR = os.path.join(BASE_DIR, '..', 'config')
 
+# 从环境变量获取基础路径（nginx location路径），默认为空字符串（本地开发使用）
+BASE_PATH = os.getenv('BASE_PATH', '')
+
 app = Flask(__name__, static_folder='../static')
 app.secret_key = 'your-secret-key-here'  # 用于session，请更改为复杂密钥
 
@@ -70,7 +73,7 @@ def login():
 def logout():
     """处理登出"""
     session.pop('user', None)
-    return redirect(url_for('index'))
+    return redirect(BASE_PATH + '/')
 
 @app.route('/auth-status')
 def auth_status():
@@ -79,7 +82,13 @@ def auth_status():
 
 @app.route('/')
 def index():
-    return send_from_directory(STATIC_DIR, 'index.html')
+    # 动态注入BASE_PATH到index.html
+    index_path = os.path.join(STATIC_DIR, 'index.html')
+    with open(index_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    # 替换占位符
+    content = content.replace('{{base_path}}', BASE_PATH)
+    return content, 200, {'Content-Type': 'text/html'}
 
 @app.route('/script.js')
 def script_js():
@@ -166,7 +175,7 @@ def generate_image():
                     # 构建一个指向我们自己 Flask 服务的 URL
                     # 使用 <path:subpath> 来处理可能存在的子文件夹
                     image_path = f"{subfolder}/{filename}" if subfolder else filename
-                    image_url = f"/image/{image_path}"
+                    image_url = f"{BASE_PATH}/image/{image_path}"
                     
                     print(f"任务完成! 图片URL: {image_url}")
                     return jsonify({"image_url": image_url})
