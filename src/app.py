@@ -5,6 +5,7 @@ import time
 import os
 from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
 from flask_httpauth import HTTPBasicAuth
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = os.path.dirname(__file__)
@@ -17,19 +18,31 @@ BASE_PATH = os.getenv('BASE_PATH', '')
 app = Flask(__name__, static_folder='../static')
 app.secret_key = 'your-secret-key-here'  # 用于session，请更改为复杂密钥
 
+# 数据库配置
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 初始化数据库
+db = SQLAlchemy(app)
+
 # 初始化 HTTPAuth
 auth = HTTPBasicAuth()
 
-# 硬编码用户示例 (生产环境使用数据库)
-users = {
-    "admin": generate_password_hash("password"),
-    "user1": generate_password_hash("pass1")
-}
+# 用户模型
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 @auth.verify_password
 def verify_password(username, password):
-    if username in users and check_password_hash(users.get(username), password):
+    user = User.query.filter_by(username=username).first()
+    if user and check_password_hash(user.password_hash, password):
         return username
+    return None
 
 # --- 配置 ---
 COMFYUI_API_URL = "http://127.0.0.1:8188"
@@ -201,6 +214,22 @@ def serve_image(subpath):
     return send_from_directory(COMFYUI_OUTPUT_DIR, subpath)
 
 
+# 数据库初始化函数
+def init_db():
+    with app.app_context():
+        db.create_all()
+        # 创建默认用户
+        if not User.query.filter_by(username='admin').first():
+            admin_user = User(username='admin', password_hash=generate_password_hash('password'))
+            db.session.add(admin_user)
+        if not User.query.filter_by(username='user1').first():
+            user1 = User(username='user1', password_hash=generate_password_hash('pass1'))
+            db.session.add(user1)
+        db.session.commit()
+        print("数据库初始化完成")
+
+
 if __name__ == '__main__':
+    init_db()
     # 确保监听所有网络接口
     app.run(host='127.0.0.1', port=5000, debug=False)

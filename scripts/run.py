@@ -1,5 +1,11 @@
 import os
 import argparse
+import sys
+
+# 添加项目根目录到Python路径
+# scripts目录的父目录即为项目根目录
+project_root = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, project_root)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='启动Comfimage服务')
@@ -10,6 +16,6 @@ if __name__ == '__main__':
     os.environ['BASE_PATH'] = args.base_url
 
     # 在设置环境变量后导入app
-    from app.app import app
+    from src.app import app
 
     app.run(host='127.0.0.1', port=5000, debug=False)
