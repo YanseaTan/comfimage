@@ -5,11 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container');
     const mainContainer = document.getElementById('main-container');
     const loginForm = document.getElementById('login-form');
-    const userInfo = document.getElementById('user-info');
-    const logoutLink = document.getElementById('logout-link');
+    const userMenu = document.getElementById('user-menu');
+    const userMenuToggle = document.getElementById('user-menu-toggle');
+    const userMenuDropdown = document.getElementById('user-menu-dropdown');
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const changePasswordModal = document.getElementById('change-password-modal');
+    const changePasswordClose = document.getElementById('change-password-close');
+    const changePasswordForm = document.getElementById('change-password-form');
 
-    // 设置登出链接
-    logoutLink.href = baseUrl + '/logout';
     const form = document.getElementById('generate-form');
     const generateBtn = document.getElementById('generate-btn');
     const progressContainer = document.getElementById('progress-container');
@@ -33,22 +37,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.logged_in) {
                     loginContainer.style.display = 'none';
                     mainContainer.style.display = 'flex';
-                    userInfo.textContent = data.user;
-                    userInfo.style.display = 'inline';
-                    logoutLink.style.display = 'inline';
+                    document.getElementById('user-info').textContent = data.user;
+                    userMenu.style.display = 'block';
                 } else {
                     loginContainer.style.display = 'flex';
                     mainContainer.style.display = 'none';
-                    userInfo.style.display = 'none';
-                    logoutLink.style.display = 'none';
+                    userMenu.style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('Auth check failed:', error);
                 loginContainer.style.display = 'flex';
                 mainContainer.style.display = 'none';
-                userInfo.style.display = 'none';
-                logoutLink.style.display = 'none';
+                userMenu.style.display = 'none';
             });
     }
 
@@ -80,6 +81,96 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             document.getElementById('login-error').textContent = '登录失败: ' + error.message;
             document.getElementById('login-error').style.display = 'block';
+        }
+    });
+
+    // 用户菜单切换
+    userMenuToggle.addEventListener('click', () => {
+        userMenuDropdown.classList.toggle('show');
+    });
+
+    // 点击其他地方关闭菜单
+    document.addEventListener('click', (event) => {
+        if (!userMenu.contains(event.target)) {
+            userMenuDropdown.classList.remove('show');
+        }
+    });
+
+    // 修改密码按钮点击
+    changePasswordBtn.addEventListener('click', () => {
+        userMenuDropdown.classList.remove('show');
+        changePasswordModal.classList.add('show');
+        // 清空表单
+        changePasswordForm.reset();
+        document.getElementById('change-password-error').style.display = 'none';
+    });
+
+    // 登出按钮点击
+    logoutBtn.addEventListener('click', () => {
+        userMenuDropdown.classList.remove('show');
+        window.location.href = baseUrl + '/logout';
+    });
+
+    // 修改密码弹窗关闭
+    changePasswordClose.addEventListener('click', () => {
+        changePasswordModal.classList.remove('show');
+    });
+
+    // 点击弹窗背景关闭
+    changePasswordModal.addEventListener('click', (event) => {
+        if (event.target === changePasswordModal) {
+            changePasswordModal.classList.remove('show');
+        }
+    });
+
+    // 修改密码表单提交
+    changePasswordForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const oldPassword = document.getElementById('old-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        const errorDiv = document.getElementById('change-password-error');
+
+        // 清除之前的错误信息
+        errorDiv.style.display = 'none';
+
+        // 验证新密码和确认密码是否匹配
+        if (newPassword !== confirmPassword) {
+            errorDiv.textContent = '新密码和确认密码不匹配';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // 验证新密码长度
+        if (newPassword.length < 4) {
+            errorDiv.textContent = '新密码长度至少为4个字符';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        try {
+            const response = await fetch(baseUrl + '/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    old_password: oldPassword,
+                    new_password: newPassword
+                })
+            });
+
+            if (response.ok) {
+                alert('密码修改成功！');
+                changePasswordModal.classList.remove('show');
+            } else {
+                const data = await response.json();
+                errorDiv.textContent = data.error || '密码修改失败';
+                errorDiv.style.display = 'block';
+            }
+        } catch (error) {
+            errorDiv.textContent = '网络错误，请稍后重试';
+            errorDiv.style.display = 'block';
         }
     });
 

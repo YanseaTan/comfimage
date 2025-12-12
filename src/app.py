@@ -88,6 +88,31 @@ def logout():
     session.pop('user', None)
     return redirect(BASE_PATH + '/')
 
+@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """修改密码"""
+    data = request.get_json()
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    if not old_password or not new_password:
+        return jsonify({"error": "旧密码和新密码都是必需的"}), 400
+
+    if len(new_password) < 4:
+        return jsonify({"error": "新密码长度至少为4个字符"}), 400
+
+    username = session.get('user')
+    user = User.query.filter_by(username=username).first()
+
+    if not user or not check_password_hash(user.password_hash, old_password):
+        return jsonify({"error": "旧密码不正确"}), 401
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "密码修改成功"})
+
 @app.route('/auth-status')
 def auth_status():
     """检查登录状态"""
