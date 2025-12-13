@@ -382,6 +382,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 显示复制提示
+    function showCopyToast(message) {
+        const toast = document.createElement('span');
+        toast.textContent = message;
+        toast.className = 'copy-toast';
+        toast.style.top = '30px';
+        toast.style.right = '200px'; // 在复制按钮旁边
+        document.getElementById('image-modal').appendChild(toast);
+        // 动画结束后移除
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
+    }
+
     // 复制图片
     copyBtn.onclick = async function() {
         try {
@@ -410,19 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             alert('复制失败：' + error.message + '。请尝试升级浏览器或使用下载功能。');
         }
-
-    function showCopyToast(message) {
-        const toast = document.createElement('span');
-        toast.textContent = message;
-        toast.className = 'copy-toast';
-        toast.style.top = '30px';
-        toast.style.right = '200px'; // 在复制按钮旁边
-        document.getElementById('image-modal').appendChild(toast);
-        // 动画结束后移除
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
-    }
     }
 
     // 下载图片

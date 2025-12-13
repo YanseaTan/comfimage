@@ -1,13 +1,16 @@
 import json
-import random
-import requests
-import time
 import os
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
+import random
+import time
+from functools import wraps
+
+import requests
+from flask import Flask, jsonify, redirect, request, send_from_directory, session, url_for
 from flask_httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# 项目路径配置
 BASE_DIR = os.path.dirname(__file__)
 STATIC_DIR = os.path.join(BASE_DIR, '..', 'static')
 CONFIG_DIR = os.path.join(BASE_DIR, '..', 'config')
@@ -15,6 +18,7 @@ CONFIG_DIR = os.path.join(BASE_DIR, '..', 'config')
 # 从环境变量获取基础路径（nginx location路径），默认为空字符串（本地开发使用）
 BASE_PATH = os.getenv('BASE_PATH', '')
 
+# Flask应用配置
 app = Flask(__name__, static_folder='../static')
 app.secret_key = 'your-secret-key-here'  # 用于session，请更改为复杂密钥
 
@@ -22,10 +26,8 @@ app.secret_key = 'your-secret-key-here'  # 用于session，请更改为复杂密
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# 初始化数据库
+# 初始化数据库和认证
 db = SQLAlchemy(app)
-
-# 初始化 HTTPAuth
 auth = HTTPBasicAuth()
 
 # 用户模型
@@ -63,7 +65,6 @@ except FileNotFoundError:
 
 def login_required(func):
     """装饰器：检查用户是否登录"""
-    from functools import wraps
     @wraps(func)
     def decorated_function(*args, **kwargs):
         if 'user' not in session:
@@ -209,12 +210,10 @@ def generate_image():
                     filename = image_info['filename']
                     subfolder = image_info.get('subfolder', '')
                     
-                    # *** 关键改动在这里 ***
-                    # 构建一个指向我们自己 Flask 服务的 URL
-                    # 使用 <path:subpath> 来处理可能存在的子文件夹
+                    # 构建图片URL
                     image_path = f"{subfolder}/{filename}" if subfolder else filename
                     image_url = f"{BASE_PATH}/image/{image_path}"
-                    
+
                     print(f"任务完成! 图片URL: {image_url}")
                     return jsonify({"image_url": image_url})
                 else:
@@ -222,7 +221,6 @@ def generate_image():
         
         time.sleep(1)
 
-# *** 新增：用于提供图片服务的路由 ***
 @app.route('/image/<path:subpath>')
 @login_required
 def serve_image(subpath):
