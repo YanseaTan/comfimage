@@ -236,6 +236,7 @@
         .close:hover, .close:focus { color: #bbb; text-decoration: none; }
         .action-btn { position: absolute; top: 30px; color: #f1f1f1; font-size: 18px; cursor: pointer; padding: 5px; }
         .action-btn:hover { color: #bbb; }
+        #edit-btn { right: 190px; }
         #copy-btn { right: 140px; }
         #download-btn { right: 90px; }
 
@@ -317,6 +318,14 @@
             z-index: 10;
         }
         .upload-delete-btn:hover {
+            color: #666;
+        }
+
+        /* 历史记录动作按钮样式 */
+        .history-action-btn {
+            color: gray;
+        }
+        .history-action-btn:hover {
             color: #666;
         }
 
@@ -476,6 +485,7 @@
     <!-- 全屏图片模态框 -->
     <div id="image-modal" class="modal">
         <span class="close" id="close-modal">&times;</span>
+        <span class="action-btn" id="edit-btn" title="编辑图片">编辑</span>
         <span class="action-btn" id="copy-btn" title="复制图片">复制</span>
         <span class="action-btn" id="download-btn" title="下载图片">下载</span>
         <img class="modal-content" id="modal-image">

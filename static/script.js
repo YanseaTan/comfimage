@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-image');
     const closeBtn = document.getElementById('close-modal');
+    const editBtn = document.getElementById('edit-btn');
     const copyBtn = document.getElementById('copy-btn');
     const downloadBtn = document.getElementById('download-btn');
     const themeToggle = document.getElementById('theme-toggle');
@@ -185,6 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化
     checkAuthStatus();
 
+    // 更新生成按钮状态
+    function updateGenerateBtnState() {
+        const selectedModel = modelSelect.value;
+        if (selectedModel === 'flux2_klein_edit') {
+            const hasImage = document.getElementById('image').files.length > 0;
+            generateBtn.disabled = !hasImage;
+        } else {
+            generateBtn.disabled = false;
+        }
+    }
+
     // 处理模型切换的UI更新
     function updateModelUI(selectedModel) {
         if (selectedModel === 'flux2_klein_edit') {
@@ -202,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 恢复默认提示词
             document.getElementById('prompt').value = '一只橘猫和一只虎斑狸花猫在草坪上玩耍';
         }
+        updateGenerateBtnState();
     }
 
     // 模型选择变化处理
@@ -217,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         imagePreview.style.display = 'none';
         uploadPlaceholder.style.display = 'flex';
         uploadDeleteBtn.style.display = 'none';
+        updateGenerateBtnState();
     }
 
     // 点击上传区域触发文件选择
@@ -244,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsDataURL(file);
         }
         // 如果没有选择文件（取消选择），保持当前状态不变
+        updateGenerateBtnState();
     });
 
     // 删除按钮点击事件
@@ -285,10 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 启动进度条动画
     function startProgress() {
         let percent = 0;
+        const isEditModel = modelSelect.value === 'flux2_klein_edit';
+        const speedMultiplier = isEditModel ? 0.5 : 1; // 编辑模型速度减半
         progressInterval = setInterval(() => {
             // 模拟进度增长：前90%较快，最后10%等待实际完成
             if (percent < 90) {
-                percent += Math.random() * 5; // 每次增加0-5%
+                percent += Math.random() * 5 * speedMultiplier; // 根据模型调整增加量
                 if (percent > 90) percent = 90;
             }
             updateProgress(percent);
@@ -317,13 +334,53 @@ document.addEventListener('DOMContentLoaded', () => {
             historyItem.className = 'history-item';
             historyItem.style.position = 'relative';
 
+            // 编辑按钮
+            const editBtn = document.createElement('span');
+            editBtn.textContent = '编辑';
+            editBtn.className = 'history-action-btn';
+            editBtn.style.position = 'absolute';
+            editBtn.style.top = '0.9rem';
+            editBtn.style.right = '3rem'; // 移到删除按钮左边
+            editBtn.style.cursor = 'pointer';
+            editBtn.style.fontSize = '1rem';
+            editBtn.onclick = async () => {
+                // 切换到flux2_klein_edit模型
+                document.getElementById('model').value = 'flux2_klein_edit';
+                updateModelUI('flux2_klein_edit');
+                // 设置提示词为编辑默认
+                document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
+
+                // 下载图像并设置为File对象
+                try {
+                    const response = await fetch(item.image_url);
+                    const blob = await response.blob();
+                    const file = new File([blob], 'edit_image.png', { type: blob.type });
+                    // 创建DataTransfer来设置files
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    imageInput.files = dt.files;
+                    // 触发change事件来更新预览
+                    imageInput.dispatchEvent(new Event('change'));
+                } catch (error) {
+                    console.error('下载图像失败:', error);
+                    // 后备：只设置预览
+                    imagePreview.src = item.image_url;
+                    imagePreview.style.display = 'block';
+                    uploadPlaceholder.style.display = 'none';
+                    uploadDeleteBtn.style.display = 'block';
+                }
+
+                // 滚动到表单顶部
+                document.getElementById('generate-form').scrollIntoView({ behavior: 'smooth' });
+            };
+
             // 删除按钮
             const deleteBtn = document.createElement('span');
             deleteBtn.textContent = '×';
+            deleteBtn.className = 'history-action-btn';
             deleteBtn.style.position = 'absolute';
             deleteBtn.style.top = '0.5rem';
             deleteBtn.style.right = '0.5rem';
-            deleteBtn.style.color = 'gray';
             deleteBtn.style.cursor = 'pointer';
             deleteBtn.style.fontSize = '1.5rem';
             deleteBtn.style.fontWeight = 'bold';
@@ -366,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <strong>种子:</strong> ${item.seed || '随机'}`;
             }
 
+            historyItem.appendChild(editBtn);
             historyItem.appendChild(deleteBtn);
             historyItem.appendChild(thumb);
             historyItem.appendChild(params);
@@ -538,6 +596,40 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             alert('复制失败：' + error.message + '。请尝试升级浏览器或使用下载功能。');
         }
+    }
+
+    // 编辑图片
+    editBtn.onclick = async function() {
+        // 关闭模态框
+        modal.style.display = "none";
+        // 切换到flux2_klein_edit模型
+        document.getElementById('model').value = 'flux2_klein_edit';
+        updateModelUI('flux2_klein_edit');
+        // 设置提示词为编辑默认
+        document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
+
+        // 下载图像并设置为File对象
+        try {
+            const response = await fetch(modalImg.src);
+            const blob = await response.blob();
+            const file = new File([blob], 'edit_image.png', { type: blob.type });
+            // 创建DataTransfer来设置files
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            imageInput.files = dt.files;
+            // 触发change事件来更新预览
+            imageInput.dispatchEvent(new Event('change'));
+        } catch (error) {
+            console.error('下载图像失败:', error);
+            // 后备：只设置预览
+            imagePreview.src = modalImg.src;
+            imagePreview.style.display = 'block';
+            uploadPlaceholder.style.display = 'none';
+            uploadDeleteBtn.style.display = 'block';
+        }
+
+        // 滚动到表单顶部
+        document.getElementById('generate-form').scrollIntoView({ behavior: 'smooth' });
     }
 
     // 下载图片
