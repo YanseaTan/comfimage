@@ -131,11 +131,8 @@
         .title {
             text-align: left;
             margin: 0;
-            font-family: serif;
-            font-style: italic;
-        }
-        .title span {
-            color: red;
+            width: 120px;
+            height: auto;
         }
         .container { display: flex; flex-direction: column; gap: 2rem; }
         .card { background: var(--card-bg); padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px var(--shadow); }
@@ -311,7 +308,7 @@
 </head>
 <body>
     <header class="header">
-        <h1 class="title">Com<span>fi</span>mage</h1>
+        <img src="{{base_path}}/static/title.png" alt="Comfimage" class="title">
         <div class="header-right">
             <button id="theme-toggle" title="切换主题"></button>
             <div class="user-menu" id="user-menu">
