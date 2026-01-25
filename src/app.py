@@ -51,17 +51,46 @@ COMFYUI_API_URL = "http://127.0.0.1:8188"
 # !!! 重要: 请将此路径修改为你 ComfyUI 的实际输出目录 !!!
 # 通常是在 ComfyUI 文件夹下的 'output' 文件夹
 # 如果你的 app.py 和 ComfyUI 文件夹在同一级目录，路径可能如下：
-COMFYUI_OUTPUT_DIR = r"../../../comfyui/output" 
+COMFYUI_OUTPUT_DIR = r"../../../comfyui/output"
+COMFYUI_INPUT_DIR = r"../../../comfyui/input"
 # 使用 r"" 可以避免 Windows 路径中的反斜杠问题
 
-# 加载工作流模板
-# 注意：现在我们使用的是 API 格式的 JSON 文件
-try:
-    with open(os.path.join(CONFIG_DIR, 'z_image_turbo.json'), 'r', encoding='utf-8') as f:
-        workflow_template = json.load(f)
-except FileNotFoundError:
-    print("错误: z_image_turbo.json 文件未找到。请确保它在正确的目录下。")
-    workflow_template = None
+# 模型配置映射
+MODEL_CONFIGS = {
+    'z_image_turbo': {
+        'file': 'z_image_turbo.json',
+        'prompt_node': '6',
+        'latent_node': '13',
+        'seed_node': '3',
+        'save_node': '9'
+    },
+    'flux2_klein_t2i': {
+        'file': 'flux2_klein_t2i.json',
+        'prompt_node': '96',
+        'width_node': '88',
+        'height_node': '89',
+        'seed_node': '90',
+        'save_node': '78'
+    },
+    'flux2_klein_edit': {
+        'file': 'flux2_klein_edit.json',
+        'prompt_node': '110',
+        'load_image_node': '76',
+        'seed_node': '102',
+        'save_node': '9'
+    }
+}
+
+# 加载工作流模板缓存
+workflow_templates = {}
+for model, config in MODEL_CONFIGS.items():
+    try:
+        with open(os.path.join(CONFIG_DIR, config['file']), 'r', encoding='utf-8') as f:
+            workflow_templates[model] = json.load(f)
+        print(f"加载 {model} 工作流模板成功")
+    except FileNotFoundError:
+        print(f"错误: {config['file']} 文件未找到。")
+        workflow_templates[model] = None
 
 def login_required(func):
     """装饰器：检查用户是否登录"""
@@ -140,14 +169,50 @@ def favicon():
 @app.route('/generate', methods=['POST'])
 @login_required
 def generate_image():
-    if not workflow_template:
-        return jsonify({"error": "服务器端工作流模板未加载"}), 500
+    # 支持JSON和FormData
+    if request.content_type.startswith('multipart/form-data'):
+        model = request.form.get('model', 'z_image_turbo')
+        prompt_text = request.form.get('prompt', '')
+        seed_input = request.form.get('seed', '')
+        image_file = request.files.get('image')
+    else:
+        data = request.json
+        model = data.get('model', 'z_image_turbo')
+        prompt_text = data.get('prompt', '')
+        seed_input = data.get('seed', '')
+        width = data.get('width', 512)
+        height = data.get('height', 512)
+        image_file = None
 
-    data = request.json
-    prompt_text = data.get('prompt', '')
-    width = data.get('width', 512)
-    height = data.get('height', 512)
-    seed_input = data.get('seed', '')
+    if model not in MODEL_CONFIGS or not workflow_templates[model]:
+        return jsonify({"error": f"模型 {model} 未配置或模板未加载"}), 500
+
+    config = MODEL_CONFIGS[model]
+    workflow = json.loads(json.dumps(workflow_templates[model]))
+
+    # 处理图像上传（仅flux2_klein_edit）
+    if model == 'flux2_klein_edit' and 'load_image_node' in config:
+        if not image_file:
+            return jsonify({"error": "图像编辑模型需要上传图像"}), 400
+        # 使用ComfyUI的upload API上传图像
+        upload_response = requests.post(
+            f"{COMFYUI_API_URL}/upload/image",
+            files={'image': (image_file.filename, image_file.stream, image_file.mimetype)}
+        )
+        if upload_response.status_code != 200:
+            return jsonify({"error": f"上传图像到ComfyUI失败: {upload_response.text}"}), 500
+        upload_data = upload_response.json()
+        filename = upload_data.get('name')
+        if not filename:
+            return jsonify({"error": "ComfyUI未返回文件名"}), 500
+        print(f"图像上传到ComfyUI: {filename}")
+
+        # 注入图像路径到LoadImage节点
+        load_image_node_id = config['load_image_node']
+        if load_image_node_id in workflow and "inputs" in workflow[load_image_node_id]:
+            workflow[load_image_node_id]["inputs"]["image"] = filename
+        else:
+            return jsonify({"error": f"无法在工作流中找到LoadImage节点 (ID: {load_image_node_id})"}), 400
 
     if seed_input == '' or not seed_input.isdigit():
         seed = random.randint(0, 2**32 - 1)
@@ -156,35 +221,47 @@ def generate_image():
         seed = int(seed_input)
         print(f"使用指定种子: {seed}")
 
-    workflow = json.loads(json.dumps(workflow_template))
-
-    # --- 注入正向提示词 (API 格式) ---
-    # 节点ID: 6, 类型: CLIPTextEncode
-    # 在 API 格式中，参数在 inputs 对象里
-    prompt_node_id = "6"
+    # --- 注入正向提示词 ---
+    prompt_node_id = config['prompt_node']
     if prompt_node_id in workflow and "inputs" in workflow[prompt_node_id]:
         workflow[prompt_node_id]["inputs"]["text"] = prompt_text
     else:
         return jsonify({"error": f"无法在工作流中找到正向提示词节点 (ID: {prompt_node_id})"}), 400
 
-    # --- 注入图片尺寸 (API 格式) ---
-    # 节点ID: 13, 类型: EmptySD3LatentImage
-    # 在 API 格式中，参数在 inputs 对象里
-    empty_latent_node_id = "13"
-    if empty_latent_node_id in workflow and "inputs" in workflow[empty_latent_node_id]:
-        workflow[empty_latent_node_id]["inputs"]["width"] = width
-        workflow[empty_latent_node_id]["inputs"]["height"] = height
+    # --- 注入图片尺寸 ---
+    if model == 'flux2_klein_edit':
+        # 编辑模型不手动设置尺寸，由workflow自动获取
+        pass
+    elif 'latent_node' in config:
+        # z_image_turbo 风格：单个latent节点
+        if not request.content_type.startswith('multipart/form-data'):
+            latent_node_id = config['latent_node']
+            if latent_node_id in workflow and "inputs" in workflow[latent_node_id]:
+                workflow[latent_node_id]["inputs"]["width"] = width
+                workflow[latent_node_id]["inputs"]["height"] = height
+            else:
+                return jsonify({"error": f"无法在工作流中找到尺寸节点 (ID: {latent_node_id})"}), 400
     else:
-        return jsonify({"error": f"无法在工作流中找到尺寸节点 (ID: {empty_latent_node_id})"}), 400
+        # flux2 风格：分离的width和height节点
+        if not request.content_type.startswith('multipart/form-data'):
+            width_node_id = config['width_node']
+            height_node_id = config['height_node']
+            if width_node_id in workflow and "inputs" in workflow[width_node_id]:
+                workflow[width_node_id]["inputs"]["value"] = width
+            else:
+                return jsonify({"error": f"无法在工作流中找到宽度节点 (ID: {width_node_id})"}), 400
+            if height_node_id in workflow and "inputs" in workflow[height_node_id]:
+                workflow[height_node_id]["inputs"]["value"] = height
+            else:
+                return jsonify({"error": f"无法在工作流中找到高度节点 (ID: {height_node_id})"}), 400
 
-    # --- 注入种子 (API 格式) ---
-    # 节点ID: 3, 类型: KSampler
-    # 在 API 格式中，参数在 inputs 对象里
-    ksampler_node_id = "3"
-    if ksampler_node_id in workflow and "inputs" in workflow[ksampler_node_id]:
-        workflow[ksampler_node_id]["inputs"]["seed"] = seed
+    # --- 注入种子 ---
+    seed_node_id = config['seed_node']
+    seed_key = "noise_seed" if model.startswith('flux2') else "seed"
+    if seed_node_id in workflow and "inputs" in workflow[seed_node_id]:
+        workflow[seed_node_id]["inputs"][seed_key] = seed
     else:
-        return jsonify({"error": f"无法在工作流中找到KSampler节点 (ID: {ksampler_node_id})"}), 400
+        return jsonify({"error": f"无法在工作流中找到种子节点 (ID: {seed_node_id})"}), 400
 
     # 2. 向 ComfyUI 提交任务
     payload = {"prompt": workflow}
@@ -204,7 +281,7 @@ def generate_image():
             history = history_response.json()
             if prompt_id in history:
                 outputs = history[prompt_id]['outputs']
-                save_image_node_id = "9"
+                save_image_node_id = config['save_node']
                 if save_image_node_id in outputs:
                     image_info = outputs[save_image_node_id]["images"][0]
                     filename = image_info['filename']

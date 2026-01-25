@@ -268,6 +268,58 @@
             100% { opacity: 0; transform: translateY(-10px); }
         }
 
+        /* 上传区域样式 */
+        .upload-area {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-area:hover {
+            border-color: #999;
+        }
+        .upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        .upload-plus {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .upload-text {
+            font-size: 16px;
+        }
+        #image-preview {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+        .upload-delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            color: gray;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 10;
+        }
+        .upload-delete-btn:hover {
+            color: #666;
+        }
+
         /* 修改密码弹窗样式 */
         .change-password-modal {
             display: none;
@@ -348,11 +400,20 @@
         <div class="card">
             <form id="generate-form">
                 <div class="form-group">
+                    <label for="model">模型选择:</label>
+                    <select id="model" name="model">
+                        <option value="z_image_turbo" selected>z_image_turbo</option>
+                        <option value="flux2_klein_t2i">flux2_klein_t2i</option>
+                        <option value="flux2_klein_edit">flux2_klein_edit</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label for="prompt">提示词:</label>
                     <textarea id="prompt" name="prompt" rows="4" required>一只橘猫和一只虎斑狸花猫在草坪上玩耍</textarea>
                 </div>
 
-                <div class="options-group">
+                <div id="resolution-group" class="options-group">
                     <div class="form-group">
                         <label for="width">宽度:</label>
                         <select id="width" name="width">
@@ -377,6 +438,18 @@
                             <option value="2048">2048</option>
                         </select>
                     </div>
+                </div>
+
+                <div id="image-upload-group" class="form-group" style="display: none;">
+                    <div id="upload-area" class="upload-area">
+                        <div id="upload-placeholder" class="upload-placeholder">
+                            <span class="upload-plus">+</span>
+                            <span class="upload-text">点击上传图片</span>
+                        </div>
+                        <img id="image-preview" src="" alt="上传的图像预览" style="display: none;">
+                        <span id="upload-delete-btn" class="upload-delete-btn" style="display: none;">×</span>
+                    </div>
+                    <input type="file" id="image" name="image" accept="image/*" style="display: none;">
                 </div>
 
                 <div class="form-group">

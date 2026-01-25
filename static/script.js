@@ -28,6 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById('copy-btn');
     const downloadBtn = document.getElementById('download-btn');
     const themeToggle = document.getElementById('theme-toggle');
+    const modelSelect = document.getElementById('model');
+    const resolutionGroup = document.getElementById('resolution-group');
+    const imageUploadGroup = document.getElementById('image-upload-group');
+    const imageInput = document.getElementById('image');
+    const imagePreview = document.getElementById('image-preview');
+    const uploadArea = document.getElementById('upload-area');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const uploadDeleteBtn = document.getElementById('upload-delete-btn');
 
     // 检查认证状态
     function checkAuthStatus() {
@@ -177,6 +185,73 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化
     checkAuthStatus();
 
+    // 处理模型切换的UI更新
+    function updateModelUI(selectedModel) {
+        if (selectedModel === 'flux2_klein_edit') {
+            resolutionGroup.style.display = 'none';
+            imageUploadGroup.style.display = 'block';
+            document.getElementById('image').required = true;
+            // 设置默认提示词
+            document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
+        } else {
+            resolutionGroup.style.display = 'flex';
+            imageUploadGroup.style.display = 'none';
+            document.getElementById('image').required = false;
+            // 清除预览图片
+            resetImageUpload();
+            // 恢复默认提示词
+            document.getElementById('prompt').value = '一只橘猫和一只虎斑狸花猫在草坪上玩耍';
+        }
+    }
+
+    // 模型选择变化处理
+    modelSelect.addEventListener('change', () => {
+        const selectedModel = modelSelect.value;
+        updateModelUI(selectedModel);
+    });
+
+    // 重置图片上传区域
+    function resetImageUpload() {
+        imageInput.value = '';
+        imagePreview.src = '';
+        imagePreview.style.display = 'none';
+        uploadPlaceholder.style.display = 'flex';
+        uploadDeleteBtn.style.display = 'none';
+    }
+
+    // 点击上传区域触发文件选择
+    uploadArea.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    // 点击预览图片重新选择文件（阻止事件冒泡，避免重复触发）
+    imagePreview.addEventListener('click', (event) => {
+        event.stopPropagation(); // 阻止事件冒泡到父元素
+        imageInput.click();
+    });
+
+    // 图片上传预览
+    imageInput.addEventListener('change', () => {
+        const file = imageInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                uploadPlaceholder.style.display = 'none';
+                uploadDeleteBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        // 如果没有选择文件（取消选择），保持当前状态不变
+    });
+
+    // 删除按钮点击事件
+    uploadDeleteBtn.addEventListener('click', (event) => {
+        event.stopPropagation(); // 阻止事件冒泡
+        resetImageUpload();
+    });
+
     // 从localStorage加载主题
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
@@ -269,17 +344,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultImage.src = item.image_url;
                 resultImage.style.display = 'block';
                 // 回填参数
+                document.getElementById('model').value = item.model;
                 document.getElementById('prompt').value = item.prompt;
                 document.getElementById('width').value = item.width;
                 document.getElementById('height').value = item.height;
                 document.getElementById('seed').value = item.seed || '';
+                // 更新UI以反映模型变化
+                updateModelUI(item.model);
             };
 
             const params = document.createElement('div');
             params.style.marginTop = '0.5rem';
-            params.innerHTML = `<strong>提示词:</strong> ${item.prompt}<br>
-                                <strong>尺寸:</strong> ${item.width}x${item.height}<br>
-                                <strong>种子:</strong> ${item.seed || '随机'}`;
+            if (item.model === 'flux2_klein_edit') {
+                params.innerHTML = `<strong>模型:</strong> ${item.model}<br>
+                                    <strong>提示词:</strong> ${item.prompt}<br>
+                                    <strong>种子:</strong> ${item.seed || '随机'}`;
+            } else {
+                params.innerHTML = `<strong>模型:</strong> ${item.model}<br>
+                                    <strong>提示词:</strong> ${item.prompt}<br>
+                                    <strong>尺寸:</strong> ${item.width}x${item.height}<br>
+                                    <strong>种子:</strong> ${item.seed || '随机'}`;
+            }
 
             historyItem.appendChild(deleteBtn);
             historyItem.appendChild(thumb);
@@ -292,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
 
         // 从表单获取所有值
+        const model = document.getElementById('model').value;
         const prompt = document.getElementById('prompt').value;
         const width = document.getElementById('width').value;
         const height = document.getElementById('height').value;
@@ -307,24 +393,51 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress(0);
         startProgress();
 
+        let requestBody;
+        let headers = {};
+
+        if (model === 'flux2_klein_edit') {
+            // 对于图像编辑，使用FormData发送文件
+            const formData = new FormData();
+            formData.append('model', model);
+            formData.append('prompt', prompt);
+            formData.append('seed', seed);
+            const imageFile = document.getElementById('image').files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            requestBody = formData;
+            // 不设置Content-Type，让浏览器自动设置multipart/form-data
+        } else {
+            // 对于其他模型，使用JSON
+            headers['Content-Type'] = 'application/json';
+            requestBody = JSON.stringify({
+                model: model,
+                prompt: prompt,
+                width: parseInt(width),
+                height: parseInt(height),
+                seed: seed
+            });
+        }
+
         try {
             const response = await fetch(baseUrl + '/generate', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                // 发送包含所有新参数的 JSON
-                body: JSON.stringify({
-                    prompt: prompt,
-                    width: parseInt(width), // 确保是数字
-                    height: parseInt(height), // 确保是数字
-                    seed: seed // 可以是字符串，后端会处理
-                })
+                headers: headers,
+                body: requestBody
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || '服务器错误');
+                let errorMessage = '服务器错误';
+                const responseText = await response.text();
+                try {
+                    const errorData = JSON.parse(responseText);
+                    errorMessage = errorData.error || errorMessage;
+                } catch {
+                    // 如果不是JSON，使用文本
+                    errorMessage = responseText || '服务器返回了无效响应';
+                }
+                throw new Error(errorMessage);
             }
 
             const data = await response.json();
@@ -335,9 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 添加到历史记录
             generationHistory.unshift({
+                model: model,
                 prompt: prompt,
-                width: width,
-                height: height,
+                width: model === 'flux2_klein_edit' ? '自动' : width,
+                height: model === 'flux2_klein_edit' ? '自动' : height,
                 seed: seed,
                 image_url: data.image_url
             });
