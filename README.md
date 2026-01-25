@@ -1,3 +1,5 @@
+<div align="center"><img src="static/title.png" width="300" alt="Comfimage Title"></div>
+
 # Comfimage
 
 一个基于 ComfyUI 的 AI 图像生成 Web 应用。
