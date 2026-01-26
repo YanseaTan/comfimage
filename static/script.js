@@ -370,8 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploadDeleteBtn.style.display = 'block';
                 }
 
-                // 滚动到表单顶部
-                document.getElementById('generate-form').scrollIntoView({ behavior: 'smooth' });
+                // 滚动到页面顶端
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
             // 删除按钮
@@ -397,17 +397,39 @@ document.addEventListener('DOMContentLoaded', () => {
             thumb.style.maxWidth = '200px';
             thumb.style.borderRadius = '4px';
             thumb.style.cursor = 'pointer';
-            thumb.onclick = () => {
+            thumb.onclick = async () => {
                 resultImage.src = item.image_url;
                 resultImage.style.display = 'block';
                 // 回填参数
                 document.getElementById('model').value = item.model;
                 document.getElementById('prompt').value = item.prompt;
-                document.getElementById('width').value = item.width;
-                document.getElementById('height').value = item.height;
+                if (item.model !== 'flux2_klein_edit') {
+                    document.getElementById('width').value = item.width;
+                    document.getElementById('height').value = item.height;
+                }
                 document.getElementById('seed').value = item.seed || '';
                 // 更新UI以反映模型变化
                 updateModelUI(item.model);
+                // 如果是编辑模型，复制原始图像
+                if (item.model === 'flux2_klein_edit' && item.original_image) {
+                    try {
+                        const response = await fetch(item.original_image);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'edit_image.png', { type: blob.type });
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        imageInput.files = dt.files;
+                        imageInput.dispatchEvent(new Event('change'));
+                    } catch (error) {
+                        console.error('复制原始图像失败:', error);
+                        imagePreview.src = item.original_image;
+                        imagePreview.style.display = 'block';
+                        uploadPlaceholder.style.display = 'none';
+                        uploadDeleteBtn.style.display = 'block';
+                    }
+                }
+                // 滚动到页面顶端
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
             const params = document.createElement('div');
@@ -508,10 +530,11 @@ document.addEventListener('DOMContentLoaded', () => {
             generationHistory.unshift({
                 model: model,
                 prompt: prompt,
-                width: model === 'flux2_klein_edit' ? '自动' : width,
-                height: model === 'flux2_klein_edit' ? '自动' : height,
-                seed: seed,
-                image_url: data.image_url
+                width: model === 'flux2_klein_edit' ? null : width,
+                height: model === 'flux2_klein_edit' ? null : height,
+                seed: data.seed || seed,
+                image_url: data.image_url,
+                original_image: model === 'flux2_klein_edit' ? imagePreview.src : null
             });
 
             // 更新历史显示

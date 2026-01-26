@@ -292,7 +292,7 @@ def generate_image():
                     image_url = f"{BASE_PATH}/image/{image_path}"
 
                     print(f"任务完成! 图片URL: {image_url}")
-                    return jsonify({"image_url": image_url})
+                    return jsonify({"image_url": image_url, "seed": seed})
                 else:
                     return jsonify({"error": f"无法在工作流输出中找到图片节点 (ID: {save_image_node_id})"}), 500
         
