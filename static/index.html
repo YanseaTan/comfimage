@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comfimage</title>
     <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
             --bg-color: #f4f4f9;
@@ -72,6 +73,18 @@
             align-items: center;
             gap: 0.5rem;
             position: relative;
+        }
+        .github-link {
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+        .github-link:hover {
+            color: #333;
+        }
+        [data-theme="dark"] .github-link:hover {
+            color: #ccc;
         }
         .user-menu {
             position: relative;
@@ -216,17 +229,21 @@
         #theme-toggle::after {
             content: var(--theme-icon);
             position: absolute;
-            left: -30px;
+            font-size: 12px;
             top: 2px;
-            font-size: 16px;
-            transition: opacity 0.3s, transform 0.3s;
+            left: 28px;
+            transition: left 0.3s;
             pointer-events: none;
+            z-index: 2;
         }
         [data-theme="dark"] #theme-toggle {
             background-color: var(--button-bg);
         }
         [data-theme="dark"] #theme-toggle::before {
             transform: translateX(26px);
+        }
+        [data-theme="dark"] #theme-toggle::after {
+            left: 2px;
         }
 
         /* 全屏显示模态框 */
@@ -369,9 +386,10 @@
 </head>
 <body>
     <header class="header">
-        <img src="{{base_path}}/static/title.png" alt="Comfimage" class="title">
+        <a href="https://github.com/YanseaTan/comfimage" target="_blank" class="title-link"><img src="{{base_path}}/static/title.png" alt="Comfimage" class="title"></a>
         <div class="header-right">
             <button id="theme-toggle" title="切换主题"></button>
+            <a href="https://github.com/YanseaTan/comfimage" target="_blank" class="github-link" title="访问GitHub仓库"><i class="fab fa-github"></i></a>
             <div class="user-menu" id="user-menu">
                 <button class="user-menu-toggle" id="user-menu-toggle">
                     <span id="user-info"></span>
@@ -411,9 +429,9 @@
                 <div class="form-group">
                     <label for="model">模型选择:</label>
                     <select id="model" name="model">
-                        <option value="z_image_turbo" selected>z_image_turbo</option>
-                        <option value="flux2_klein_t2i">flux2_klein_t2i</option>
-                        <option value="flux2_klein_edit">flux2_klein_edit</option>
+                        <option value="z_image_turbo" selected>z_image_turbo - 适合人像，写实摄影</option>
+                        <option value="flux2_klein_t2i">flux2_klein_t2i - 适合建筑，风光，创意设计</option>
+                        <option value="flux2_klein_edit">flux2_klein_edit - 图像编辑，提升画面细节与清晰度</option>
                     </select>
                 </div>
 

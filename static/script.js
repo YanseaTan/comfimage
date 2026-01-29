@@ -402,14 +402,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultImage.style.display = 'block';
                 // 回填参数
                 document.getElementById('model').value = item.model;
+                // 更新UI以反映模型变化（这会设置默认提示词）
+                updateModelUI(item.model);
+                // 然后设置历史的提示词覆盖默认值
                 document.getElementById('prompt').value = item.prompt;
                 if (item.model !== 'flux2_klein_edit') {
                     document.getElementById('width').value = item.width;
                     document.getElementById('height').value = item.height;
                 }
                 document.getElementById('seed').value = item.seed || '';
-                // 更新UI以反映模型变化
-                updateModelUI(item.model);
                 // 如果是编辑模型，复制原始图像
                 if (item.model === 'flux2_klein_edit' && item.original_image) {
                     try {
