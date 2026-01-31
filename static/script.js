@@ -185,6 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化
     checkAuthStatus();
+    
+    // 页面加载时设置默认模型的提示词
+    window.addEventListener('load', () => {
+        const selectedModel = modelSelect.value;
+        updateModelUI(selectedModel);
+    });
 
     // 更新生成按钮状态
     function updateGenerateBtnState() {
@@ -211,8 +217,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('image').required = false;
             // 清除预览图片
             resetImageUpload();
-            // 恢复默认提示词
-            document.getElementById('prompt').value = '一只橘猫和一只虎斑狸花猫在草坪上玩耍';
+            // 根据模型设置不同的默认提示词
+            if (selectedModel === 'z_image_turbo') {
+                document.getElementById('prompt').value = '阳光洒在少女的脸颊上';
+            } else if (selectedModel === 'flux2_klein_t2i') {
+                document.getElementById('prompt').value = '使用梵高绘画风格绘制星空下的草原与河流';
+            } else {
+                document.getElementById('prompt').value = '';
+            }
         }
         updateGenerateBtnState();
     }
