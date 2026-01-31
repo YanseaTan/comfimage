@@ -664,8 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadDeleteBtn.style.display = 'block';
         }
 
-        // 滚动到表单顶部
-        document.getElementById('generate-form').scrollIntoView({ behavior: 'smooth' });
+        // 滚动到页面顶端
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // 下载图片
