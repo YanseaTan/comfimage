@@ -233,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
     modelSelect.addEventListener('change', () => {
         const selectedModel = modelSelect.value;
         updateModelUI(selectedModel);
+        // 清空种子值
+        document.getElementById('seed').value = '';
     });
 
     // 重置图片上传区域
@@ -361,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateModelUI('flux2_klein_edit');
                 // 设置提示词为编辑默认
                 document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
+                // 清空种子值
+                document.getElementById('seed').value = '';
 
                 // 下载图像并设置为File对象
                 try {
@@ -643,6 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateModelUI('flux2_klein_edit');
         // 设置提示词为编辑默认
         document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
+        // 清空种子值
+        document.getElementById('seed').value = '';
 
         // 下载图像并设置为File对象
         try {
