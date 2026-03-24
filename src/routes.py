@@ -37,6 +37,15 @@ def favicon():
     return send_from_directory(STATIC_DIR, 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
+@main_bp.route('/js/<path:filename>')
+def serve_js(filename):
+    """返回 js 目录下的文件"""
+    js_dir = os.path.join(STATIC_DIR, 'js')
+    response = send_from_directory(js_dir, filename)
+    response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+    return response
+
+
 @main_bp.route('/image/<path:subpath>')
 @login_required
 def serve_image(subpath):

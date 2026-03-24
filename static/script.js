@@ -1,293 +1,46 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // 使用动态注入的base路径
-    const baseUrl = window.BASE_PATH || '';
+/**
+ * 主入口文件
+ */
+import { initAuth } from './js/auth.js';
+import { initModel, getSelectedModel, updateModelUI } from './js/model.js';
+import { initUpload, getImageFile, getImagePreviewSrc } from './js/upload.js';
+import { initModal } from './js/modal.js';
+import { startProgress, completeProgress, resetProgress, stopProgress } from './js/progress.js';
+import { addHistory } from './js/history.js';
+import { generateImage } from './js/api.js';
 
-    const loginContainer = document.getElementById('login-container');
-    const mainContainer = document.getElementById('main-container');
-    const loginForm = document.getElementById('login-form');
-    const userMenu = document.getElementById('user-menu');
-    const userMenuToggle = document.getElementById('user-menu-toggle');
-    const userMenuDropdown = document.getElementById('user-menu-dropdown');
-    const changePasswordBtn = document.getElementById('change-password-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const changePasswordModal = document.getElementById('change-password-modal');
-    const changePasswordClose = document.getElementById('change-password-close');
-    const changePasswordForm = document.getElementById('change-password-form');
+// DOM 元素
+const form = document.getElementById('generate-form');
+const resultImage = document.getElementById('result-image');
+const loadingDiv = document.getElementById('loading');
+const themeToggle = document.getElementById('theme-toggle');
 
-    const form = document.getElementById('generate-form');
-    const generateBtn = document.getElementById('generate-btn');
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const resultImage = document.getElementById('result-image');
-    const loadingDiv = document.getElementById('loading');
-    const historyContainer = document.getElementById('history-container');
-    const modal = document.getElementById('image-modal');
-    const modalImg = document.getElementById('modal-image');
-    const closeBtn = document.getElementById('close-modal');
-    const editBtn = document.getElementById('edit-btn');
-    const copyBtn = document.getElementById('copy-btn');
-    const downloadBtn = document.getElementById('download-btn');
-    const themeToggle = document.getElementById('theme-toggle');
-    const modelSelect = document.getElementById('model');
-    const resolutionGroup = document.getElementById('resolution-group');
-    const imageUploadGroup = document.getElementById('image-upload-group');
-    const imageInput = document.getElementById('image');
-    const imagePreview = document.getElementById('image-preview');
-    const uploadArea = document.getElementById('upload-area');
-    const uploadPlaceholder = document.getElementById('upload-placeholder');
-    const uploadDeleteBtn = document.getElementById('upload-delete-btn');
+/**
+ * 初始化应用
+ */
+function init() {
+    // 初始化各模块
+    initAuth();
+    initModel();
+    initUpload();
+    initModal();
 
-    // 检查认证状态
-    function checkAuthStatus() {
-        fetch(baseUrl + '/auth-status')
-            .then(response => response.json())
-            .then(data => {
-                if (data.logged_in) {
-                    loginContainer.style.display = 'none';
-                    mainContainer.style.display = 'flex';
-                    document.getElementById('user-info').textContent = data.user;
-                    userMenu.style.display = 'block';
-                } else {
-                    loginContainer.style.display = 'flex';
-                    mainContainer.style.display = 'none';
-                    userMenu.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                console.error('Auth check failed:', error);
-                loginContainer.style.display = 'flex';
-                mainContainer.style.display = 'none';
-                userMenu.style.display = 'none';
-            });
-    }
+    // 主题切换
+    initTheme();
 
-    // 处理登录表单
-    loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('login-password').value;
+    // 表单提交
+    form.addEventListener('submit', handleGenerate);
+}
 
-        // 清除之前的错误信息
-        document.getElementById('login-error').style.display = 'none';
-
-        try {
-            const response = await fetch(baseUrl + '/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            });
-
-            if (response.ok) {
-                checkAuthStatus(); // 重新检查状态并自动切换到主界面
-            } else {
-                const data = await response.json();
-                document.getElementById('login-error').textContent = data.error;
-                document.getElementById('login-error').style.display = 'block';
-            }
-        } catch (error) {
-            document.getElementById('login-error').textContent = '登录失败: ' + error.message;
-            document.getElementById('login-error').style.display = 'block';
-        }
-    });
-
-    // 用户菜单切换
-    userMenuToggle.addEventListener('click', () => {
-        userMenuDropdown.classList.toggle('show');
-    });
-
-    // 点击其他地方关闭菜单
-    document.addEventListener('click', (event) => {
-        if (!userMenu.contains(event.target)) {
-            userMenuDropdown.classList.remove('show');
-        }
-    });
-
-    // 修改密码按钮点击
-    changePasswordBtn.addEventListener('click', () => {
-        userMenuDropdown.classList.remove('show');
-        changePasswordModal.classList.add('show');
-        // 清空表单
-        changePasswordForm.reset();
-        document.getElementById('change-password-error').style.display = 'none';
-    });
-
-    // 登出按钮点击
-    logoutBtn.addEventListener('click', () => {
-        userMenuDropdown.classList.remove('show');
-        window.location.href = baseUrl + '/logout';
-    });
-
-    // 修改密码弹窗关闭
-    changePasswordClose.addEventListener('click', () => {
-        changePasswordModal.classList.remove('show');
-    });
-
-    // 点击弹窗背景关闭
-    changePasswordModal.addEventListener('click', (event) => {
-        if (event.target === changePasswordModal) {
-            changePasswordModal.classList.remove('show');
-        }
-    });
-
-    // 修改密码表单提交
-    changePasswordForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const oldPassword = document.getElementById('old-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        const errorDiv = document.getElementById('change-password-error');
-
-        // 清除之前的错误信息
-        errorDiv.style.display = 'none';
-
-        // 验证新密码和确认密码是否匹配
-        if (newPassword !== confirmPassword) {
-            errorDiv.textContent = '新密码和确认密码不匹配';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        // 验证新密码长度
-        if (newPassword.length < 4) {
-            errorDiv.textContent = '新密码长度至少为4个字符';
-            errorDiv.style.display = 'block';
-            return;
-        }
-
-        try {
-            const response = await fetch(baseUrl + '/change-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    old_password: oldPassword,
-                    new_password: newPassword
-                })
-            });
-
-            if (response.ok) {
-                alert('密码修改成功！');
-                changePasswordModal.classList.remove('show');
-            } else {
-                const data = await response.json();
-                errorDiv.textContent = data.error || '密码修改失败';
-                errorDiv.style.display = 'block';
-            }
-        } catch (error) {
-            errorDiv.textContent = '网络错误，请稍后重试';
-            errorDiv.style.display = 'block';
-        }
-    });
-
-    // 初始化
-    checkAuthStatus();
-    
-    // 页面加载时设置默认模型的提示词
-    window.addEventListener('load', () => {
-        const selectedModel = modelSelect.value;
-        updateModelUI(selectedModel);
-    });
-
-    // 更新生成按钮状态
-    function updateGenerateBtnState() {
-        const selectedModel = modelSelect.value;
-        if (selectedModel === 'flux2_klein_edit') {
-            const hasImage = document.getElementById('image').files.length > 0;
-            generateBtn.disabled = !hasImage;
-        } else {
-            generateBtn.disabled = false;
-        }
-    }
-
-    // 处理模型切换的UI更新
-    function updateModelUI(selectedModel) {
-        if (selectedModel === 'flux2_klein_edit') {
-            resolutionGroup.style.display = 'none';
-            imageUploadGroup.style.display = 'block';
-            document.getElementById('image').required = true;
-            // 设置默认提示词
-            document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
-        } else {
-            resolutionGroup.style.display = 'flex';
-            imageUploadGroup.style.display = 'none';
-            document.getElementById('image').required = false;
-            // 清除预览图片
-            resetImageUpload();
-            // 根据模型设置不同的默认提示词
-            if (selectedModel === 'z_image_turbo') {
-                document.getElementById('prompt').value = '阳光洒在少女的脸颊上';
-            } else if (selectedModel === 'flux2_klein_t2i') {
-                document.getElementById('prompt').value = '使用梵高绘画风格绘制星空下的草原与河流';
-            } else {
-                document.getElementById('prompt').value = '';
-            }
-        }
-        updateGenerateBtnState();
-    }
-
-    // 模型选择变化处理
-    modelSelect.addEventListener('change', () => {
-        const selectedModel = modelSelect.value;
-        updateModelUI(selectedModel);
-        // 清空种子值
-        document.getElementById('seed').value = '';
-    });
-
-    // 重置图片上传区域
-    function resetImageUpload() {
-        imageInput.value = '';
-        imagePreview.src = '';
-        imagePreview.style.display = 'none';
-        uploadPlaceholder.style.display = 'flex';
-        uploadDeleteBtn.style.display = 'none';
-        updateGenerateBtnState();
-    }
-
-    // 点击上传区域触发文件选择
-    uploadArea.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    // 点击预览图片重新选择文件（阻止事件冒泡，避免重复触发）
-    imagePreview.addEventListener('click', (event) => {
-        event.stopPropagation(); // 阻止事件冒泡到父元素
-        imageInput.click();
-    });
-
-    // 图片上传预览
-    imageInput.addEventListener('change', () => {
-        const file = imageInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.src = e.target.result;
-                imagePreview.style.display = 'block';
-                uploadPlaceholder.style.display = 'none';
-                uploadDeleteBtn.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
-        // 如果没有选择文件（取消选择），保持当前状态不变
-        updateGenerateBtnState();
-    });
-
-    // 删除按钮点击事件
-    uploadDeleteBtn.addEventListener('click', (event) => {
-        event.stopPropagation(); // 阻止事件冒泡
-        resetImageUpload();
-    });
-
-    // 从localStorage加载主题
+/**
+ * 初始化主题
+ */
+function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
     }
 
-    // 主题切换
     themeToggle.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme === 'dark') {
@@ -298,389 +51,57 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('theme', 'dark');
         }
     });
+}
 
-    // 存储历史记录的数组
-    let generationHistory = [];
+/**
+ * 处理图片生成
+ */
+async function handleGenerate(event) {
+    event.preventDefault();
 
-    // 进度条相关变量
-    let progressInterval = null;
+    const model = getSelectedModel();
+    const prompt = document.getElementById('prompt').value;
+    const width = document.getElementById('width').value;
+    const height = document.getElementById('height').value;
+    const seed = document.getElementById('seed').value;
+    const image = getImageFile();
 
-    // 更新进度条显示的函数
-    function updateProgress(percent) {
-        progressBar.style.width = percent + '%';
-        progressText.textContent = Math.round(percent) + '%';
-    }
+    // UI 状态更新
+    resetProgress();
+    loadingDiv.style.display = 'block';
+    resultImage.style.display = 'none';
 
-    // 启动进度条动画
-    function startProgress() {
-        let percent = 0;
-        const isEditModel = modelSelect.value === 'flux2_klein_edit';
-        const speedMultiplier = isEditModel ? 0.5 : 1; // 编辑模型速度减半
-        progressInterval = setInterval(() => {
-            // 模拟进度增长：前90%较快，最后10%等待实际完成
-            if (percent < 90) {
-                percent += Math.random() * 5 * speedMultiplier; // 根据模型调整增加量
-                if (percent > 90) percent = 90;
-            }
-            updateProgress(percent);
-        }, 500);
-    }
+    // 启动进度条
+    startProgress(model === 'flux2_klein_edit');
 
-    // 停止进度条并完成
-    function completeProgress() {
-        if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-        }
-        updateProgress(100);
-        // 短暂延时后切换回按钮
-        setTimeout(() => {
-            progressContainer.style.display = 'none';
-            generateBtn.style.display = 'block';
-        }, 500);
-    }
+    try {
+        const { data } = await generateImage({ model, prompt, width, height, seed, image });
 
-    // 更新历史记录显示
-    function updateHistory() {
-        historyContainer.innerHTML = '';
-        generationHistory.forEach((item, index) => {
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.style.position = 'relative';
+        // 显示图片
+        resultImage.src = data.image_url;
+        resultImage.style.display = 'block';
 
-            // 编辑按钮
-            const editBtn = document.createElement('span');
-            editBtn.textContent = '编辑';
-            editBtn.className = 'history-action-btn';
-            editBtn.style.position = 'absolute';
-            editBtn.style.top = '0.9rem';
-            editBtn.style.right = '3rem'; // 移到删除按钮左边
-            editBtn.style.cursor = 'pointer';
-            editBtn.style.fontSize = '1rem';
-            editBtn.onclick = async () => {
-                // 切换到flux2_klein_edit模型
-                document.getElementById('model').value = 'flux2_klein_edit';
-                updateModelUI('flux2_klein_edit');
-                // 设置提示词为编辑默认
-                document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
-                // 清空种子值
-                document.getElementById('seed').value = '';
-
-                // 下载图像并设置为File对象
-                try {
-                    const response = await fetch(item.image_url);
-                    const blob = await response.blob();
-                    const file = new File([blob], 'edit_image.png', { type: blob.type });
-                    // 创建DataTransfer来设置files
-                    const dt = new DataTransfer();
-                    dt.items.add(file);
-                    imageInput.files = dt.files;
-                    // 触发change事件来更新预览
-                    imageInput.dispatchEvent(new Event('change'));
-                } catch (error) {
-                    console.error('下载图像失败:', error);
-                    // 后备：只设置预览
-                    imagePreview.src = item.image_url;
-                    imagePreview.style.display = 'block';
-                    uploadPlaceholder.style.display = 'none';
-                    uploadDeleteBtn.style.display = 'block';
-                }
-
-                // 滚动到页面顶端
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            // 删除按钮
-            const deleteBtn = document.createElement('span');
-            deleteBtn.textContent = '×';
-            deleteBtn.className = 'history-action-btn';
-            deleteBtn.style.position = 'absolute';
-            deleteBtn.style.top = '0.5rem';
-            deleteBtn.style.right = '0.5rem';
-            deleteBtn.style.cursor = 'pointer';
-            deleteBtn.style.fontSize = '1.5rem';
-            deleteBtn.style.fontWeight = 'bold';
-            deleteBtn.onclick = () => {
-                if (confirm('确定要删除此记录吗？')) {
-                    generationHistory.splice(index, 1);
-                    updateHistory();
-                }
-            };
-
-            const thumb = document.createElement('img');
-            thumb.src = item.image_url;
-            thumb.alt = `Generated Image ${index + 1}`;
-            thumb.style.maxWidth = '200px';
-            thumb.style.borderRadius = '4px';
-            thumb.style.cursor = 'pointer';
-            thumb.onclick = async () => {
-                resultImage.src = item.image_url;
-                resultImage.style.display = 'block';
-                // 回填参数
-                document.getElementById('model').value = item.model;
-                // 更新UI以反映模型变化（这会设置默认提示词）
-                updateModelUI(item.model);
-                // 然后设置历史的提示词覆盖默认值
-                document.getElementById('prompt').value = item.prompt;
-                if (item.model !== 'flux2_klein_edit') {
-                    document.getElementById('width').value = item.width;
-                    document.getElementById('height').value = item.height;
-                }
-                document.getElementById('seed').value = item.seed || '';
-                // 如果是编辑模型，复制原始图像
-                if (item.model === 'flux2_klein_edit' && item.original_image) {
-                    try {
-                        const response = await fetch(item.original_image);
-                        const blob = await response.blob();
-                        const file = new File([blob], 'edit_image.png', { type: blob.type });
-                        const dt = new DataTransfer();
-                        dt.items.add(file);
-                        imageInput.files = dt.files;
-                        imageInput.dispatchEvent(new Event('change'));
-                    } catch (error) {
-                        console.error('复制原始图像失败:', error);
-                        imagePreview.src = item.original_image;
-                        imagePreview.style.display = 'block';
-                        uploadPlaceholder.style.display = 'none';
-                        uploadDeleteBtn.style.display = 'block';
-                    }
-                }
-                // 滚动到页面顶端
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            const params = document.createElement('div');
-            params.style.marginTop = '0.5rem';
-            if (item.model === 'flux2_klein_edit') {
-                params.innerHTML = `<strong>模型:</strong> ${item.model}<br>
-                                    <strong>提示词:</strong> ${item.prompt}<br>
-                                    <strong>种子:</strong> ${item.seed || '随机'}`;
-            } else {
-                params.innerHTML = `<strong>模型:</strong> ${item.model}<br>
-                                    <strong>提示词:</strong> ${item.prompt}<br>
-                                    <strong>尺寸:</strong> ${item.width}x${item.height}<br>
-                                    <strong>种子:</strong> ${item.seed || '随机'}`;
-            }
-
-            historyItem.appendChild(editBtn);
-            historyItem.appendChild(deleteBtn);
-            historyItem.appendChild(thumb);
-            historyItem.appendChild(params);
-            historyContainer.appendChild(historyItem);
+        // 添加到历史记录
+        addHistory({
+            model,
+            prompt,
+            width: model === 'flux2_klein_edit' ? null : width,
+            height: model === 'flux2_klein_edit' ? null : height,
+            seed: data.seed || seed,
+            image_url: data.image_url,
+            original_image: model === 'flux2_klein_edit' ? getImagePreviewSrc() : null
         });
+
+        completeProgress();
+
+    } catch (error) {
+        alert(`生成失败: ${error.message}`);
+        console.error('Error:', error);
+        stopProgress();
+    } finally {
+        loadingDiv.style.display = 'none';
     }
+}
 
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        // 从表单获取所有值
-        const model = document.getElementById('model').value;
-        const prompt = document.getElementById('prompt').value;
-        const width = document.getElementById('width').value;
-        const height = document.getElementById('height').value;
-        const seed = document.getElementById('seed').value;
-
-        // UI 状态更新：隐藏按钮，显示进度条
-        generateBtn.style.display = 'none';
-        progressContainer.style.display = 'block';
-        loadingDiv.style.display = 'block';
-        resultImage.style.display = 'none';
-
-        // 重置并启动进度条
-        updateProgress(0);
-        startProgress();
-
-        let requestBody;
-        let headers = {};
-
-        if (model === 'flux2_klein_edit') {
-            // 对于图像编辑，使用FormData发送文件
-            const formData = new FormData();
-            formData.append('model', model);
-            formData.append('prompt', prompt);
-            formData.append('seed', seed);
-            const imageFile = document.getElementById('image').files[0];
-            if (imageFile) {
-                formData.append('image', imageFile);
-            }
-            requestBody = formData;
-            // 不设置Content-Type，让浏览器自动设置multipart/form-data
-        } else {
-            // 对于其他模型，使用JSON
-            headers['Content-Type'] = 'application/json';
-            requestBody = JSON.stringify({
-                model: model,
-                prompt: prompt,
-                width: parseInt(width),
-                height: parseInt(height),
-                seed: seed
-            });
-        }
-
-        try {
-            const response = await fetch(baseUrl + '/generate', {
-                method: 'POST',
-                headers: headers,
-                body: requestBody
-            });
-
-            if (!response.ok) {
-                let errorMessage = '服务器错误';
-                const responseText = await response.text();
-                try {
-                    const errorData = JSON.parse(responseText);
-                    errorMessage = errorData.error || errorMessage;
-                } catch {
-                    // 如果不是JSON，使用文本
-                    errorMessage = responseText || '服务器返回了无效响应';
-                }
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-
-            // 显示图片
-            resultImage.src = data.image_url;
-            resultImage.style.display = 'block';
-
-            // 添加到历史记录
-            generationHistory.unshift({
-                model: model,
-                prompt: prompt,
-                width: model === 'flux2_klein_edit' ? null : width,
-                height: model === 'flux2_klein_edit' ? null : height,
-                seed: data.seed || seed,
-                image_url: data.image_url,
-                original_image: model === 'flux2_klein_edit' ? imagePreview.src : null
-            });
-
-            // 更新历史显示
-            updateHistory();
-
-            // 完成进度条
-            completeProgress();
-
-        } catch (error) {
-            alert(`生成失败: ${error.message}`);
-            console.error('Error:', error);
-            // 停止进度条并显示按钮
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-            }
-            progressContainer.style.display = 'none';
-            generateBtn.style.display = 'block';
-        } finally {
-            // 恢复其他UI状态
-            loadingDiv.style.display = 'none';
-        }
-    });
-
-    // 点击result-image打开全屏模态框
-    resultImage.onclick = function() {
-        modal.style.display = "block";
-        modalImg.src = this.src;
-    }
-
-    // 点击关闭按钮隐藏模态框
-    closeBtn.onclick = function() {
-        modal.style.display = "none";
-    }
-
-    // 点击模态框背景隐藏模态框
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.style.display = "none";
-        }
-    }
-
-    // 显示复制提示
-    function showCopyToast(message) {
-        const toast = document.createElement('span');
-        toast.textContent = message;
-        toast.className = 'copy-toast';
-        toast.style.top = '30px';
-        toast.style.right = '200px'; // 在复制按钮旁边
-        document.getElementById('image-modal').appendChild(toast);
-        // 动画结束后移除
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
-    }
-
-    // 复制图片
-    copyBtn.onclick = async function() {
-        try {
-            // 尝试复制图片blob（现代浏览器支持）
-            if (navigator.clipboard && window.ClipboardItem) {
-                const response = await fetch(modalImg.src);
-                const blob = await response.blob();
-                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-                showCopyToast('图片已复制');
-            } else if (navigator.clipboard) {
-                // 后备方法：复制图片URL到文本剪贴板
-                await navigator.clipboard.writeText(modalImg.src);
-                showCopyToast('图片URL已复制');
-            } else {
-                // 兼容老浏览器：使用execCommand复制URL
-                const textArea = document.createElement('textarea');
-                textArea.value = modalImg.src;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999px';
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showCopyToast('图片URL已复制');
-            }
-        } catch (error) {
-            alert('复制失败：' + error.message + '。请尝试升级浏览器或使用下载功能。');
-        }
-    }
-
-    // 编辑图片
-    editBtn.onclick = async function() {
-        // 关闭模态框
-        modal.style.display = "none";
-        // 切换到flux2_klein_edit模型
-        document.getElementById('model').value = 'flux2_klein_edit';
-        updateModelUI('flux2_klein_edit');
-        // 设置提示词为编辑默认
-        document.getElementById('prompt').value = '将画面风格变为迪士尼3D动画风格';
-        // 清空种子值
-        document.getElementById('seed').value = '';
-
-        // 下载图像并设置为File对象
-        try {
-            const response = await fetch(modalImg.src);
-            const blob = await response.blob();
-            const file = new File([blob], 'edit_image.png', { type: blob.type });
-            // 创建DataTransfer来设置files
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            imageInput.files = dt.files;
-            // 触发change事件来更新预览
-            imageInput.dispatchEvent(new Event('change'));
-        } catch (error) {
-            console.error('下载图像失败:', error);
-            // 后备：只设置预览
-            imagePreview.src = modalImg.src;
-            imagePreview.style.display = 'block';
-            uploadPlaceholder.style.display = 'none';
-            uploadDeleteBtn.style.display = 'block';
-        }
-
-        // 滚动到页面顶端
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // 下载图片
-    downloadBtn.onclick = function() {
-        const link = document.createElement('a');
-        link.href = modalImg.src;
-        link.download = modalImg.src.split('/').pop() || 'generated_image.png';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-});
+// 启动应用
+document.addEventListener('DOMContentLoaded', init);
