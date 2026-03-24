@@ -114,6 +114,9 @@ dmypy.json
 *.swo
 *~
 
+# AI tools
+CLAUDE.md
+
 # OS
 .DS_Store
 Thumbs.db
