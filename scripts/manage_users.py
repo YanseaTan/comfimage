@@ -12,7 +12,8 @@ import os
 # scripts目录的父目录即为项目根目录
 project_root = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, project_root)
-from src.app import app, db, User
+from src.app import app
+from src.models import db, User
 from werkzeug.security import generate_password_hash
 
 def create_user(username, password):
