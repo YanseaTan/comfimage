@@ -60,3 +60,18 @@ def serve_image(subpath):
         return "Invalid file path", 400
 
     return send_from_directory(COMFYUI_OUTPUT_DIR, subpath)
+
+
+@main_bp.route('/video/<path:subpath>')
+@login_required
+def serve_video(subpath):
+    """
+    从 ComfyUI 的输出目录中提供视频文件。
+    路径穿越检查与 /image/ 路由一致。
+    """
+    # 安全检查：防止路径遍历攻击
+    safe_path = os.path.join(COMFYUI_OUTPUT_DIR, subpath)
+    if not os.path.abspath(safe_path).startswith(os.path.abspath(COMFYUI_OUTPUT_DIR)):
+        return "Invalid file path", 400
+
+    return send_from_directory(COMFYUI_OUTPUT_DIR, subpath)

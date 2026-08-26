@@ -1,68 +1,130 @@
 /**
- * 图片上传模块
+ * 图片上传模块（工厂化，支持多实例）
  */
 
-// DOM 元素
-const imageInput = document.getElementById('image');
-const imagePreview = document.getElementById('image-preview');
-const uploadArea = document.getElementById('upload-area');
-const uploadPlaceholder = document.getElementById('upload-placeholder');
-const uploadDeleteBtn = document.getElementById('upload-delete-btn');
+/**
+ * 创建上传控件实例
+ * @param {object} options
+ * @param {string} options.inputId       文件输入元素 id
+ * @param {string} options.areaId        上传区域元素 id
+ * @param {string} options.placeholderId 占位元素 id
+ * @param {string} options.previewId     预览图元素 id
+ * @param {string} options.deleteBtnId   删除按钮元素 id
+ * @param {Function} [options.onChange]  文件选择/重置后的回调（如按钮状态更新）
+ * @returns {object} { init, reset, getFile, getPreviewSrc, elements }
+ */
+export function createUploader(options) {
+    const elements = {
+        input: document.getElementById(options.inputId),
+        area: document.getElementById(options.areaId),
+        placeholder: document.getElementById(options.placeholderId),
+        preview: document.getElementById(options.previewId),
+        deleteBtn: document.getElementById(options.deleteBtnId)
+    };
+
+    /**
+     * 处理图片选择变化
+     */
+    function handleImageChange() {
+        const file = elements.input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                elements.preview.src = e.target.result;
+                elements.preview.style.display = 'block';
+                elements.placeholder.style.display = 'none';
+                elements.deleteBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+        if (options.onChange) {
+            options.onChange();
+        }
+    }
+
+    /**
+     * 初始化上传模块
+     */
+    function init() {
+        // 点击上传区域触发文件选择
+        elements.area.addEventListener('click', () => {
+            elements.input.click();
+        });
+
+        // 点击预览图片重新选择文件
+        elements.preview.addEventListener('click', (event) => {
+            event.stopPropagation();
+            elements.input.click();
+        });
+
+        // 图片上传预览
+        elements.input.addEventListener('change', handleImageChange);
+
+        // 删除按钮
+        elements.deleteBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            reset();
+        });
+    }
+
+    /**
+     * 重置上传区域
+     */
+    function reset() {
+        elements.input.value = '';
+        elements.preview.src = '';
+        elements.preview.style.display = 'none';
+        elements.placeholder.style.display = 'flex';
+        elements.deleteBtn.style.display = 'none';
+        if (options.onChange) {
+            options.onChange();
+        }
+    }
+
+    /**
+     * 获取图片文件
+     * @returns {File|null}
+     */
+    function getFile() {
+        return elements.input.files[0] || null;
+    }
+
+    /**
+     * 获取图片预览 URL
+     * @returns {string}
+     */
+    function getPreviewSrc() {
+        return elements.preview.src;
+    }
+
+    return { init, reset, getFile, getPreviewSrc, elements };
+}
+
+// 默认实例（图片表单），保持向后兼容
+const imageUploader = createUploader({
+    inputId: 'image',
+    areaId: 'upload-area',
+    placeholderId: 'upload-placeholder',
+    previewId: 'image-preview',
+    deleteBtnId: 'upload-delete-btn',
+    onChange: updateGenerateBtnState
+});
+
+// 图片表单的生成按钮（供状态更新使用）
 const generateBtn = document.getElementById('generate-btn');
 
 /**
- * 初始化上传模块
+ * 初始化图片上传模块
  */
 export function initUpload() {
-    // 点击上传区域触发文件选择
-    uploadArea.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    // 点击预览图片重新选择文件
-    imagePreview.addEventListener('click', (event) => {
-        event.stopPropagation();
-        imageInput.click();
-    });
-
-    // 图片上传预览
-    imageInput.addEventListener('change', handleImageChange);
-
-    // 删除按钮
-    uploadDeleteBtn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        resetImageUpload();
-    });
-}
-
-/**
- * 处理图片选择变化
- */
-function handleImageChange() {
-    const file = imageInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            imagePreview.src = e.target.result;
-            imagePreview.style.display = 'block';
-            uploadPlaceholder.style.display = 'none';
-            uploadDeleteBtn.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-    updateGenerateBtnState();
+    imageUploader.init();
 }
 
 /**
  * 重置图片上传区域
  */
 export function resetImageUpload() {
-    imageInput.value = '';
-    imagePreview.src = '';
-    imagePreview.style.display = 'none';
-    uploadPlaceholder.style.display = 'flex';
-    uploadDeleteBtn.style.display = 'none';
-    updateGenerateBtnState();
+    imageUploader.reset();
 }
 
 /**
@@ -71,7 +133,7 @@ export function resetImageUpload() {
 export function updateGenerateBtnState() {
     const modelSelect = document.getElementById('model');
     if (modelSelect.value === 'flux2_klein_edit') {
-        const hasImage = imageInput.files.length > 0;
+        const hasImage = imageUploader.getFile();
         generateBtn.disabled = !hasImage;
     } else {
         generateBtn.disabled = false;
@@ -83,7 +145,7 @@ export function updateGenerateBtnState() {
  * @returns {File|null}
  */
 export function getImageFile() {
-    return imageInput.files[0] || null;
+    return imageUploader.getFile();
 }
 
 /**
@@ -91,8 +153,8 @@ export function getImageFile() {
  * @returns {string}
  */
 export function getImagePreviewSrc() {
-    return imagePreview.src;
+    return imageUploader.getPreviewSrc();
 }
 
 // 导出 DOM 元素供其他模块使用
-export { imageInput, imagePreview, uploadPlaceholder, uploadDeleteBtn };
+export const { input: imageInput, preview: imagePreview, placeholder: uploadPlaceholder, deleteBtn: uploadDeleteBtn } = imageUploader.elements;

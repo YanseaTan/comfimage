@@ -17,8 +17,8 @@ BASE_PATH = os.getenv('BASE_PATH', '')
 COMFYUI_API_URL = "http://127.0.0.1:8188"
 # !!! 重要: 请将此路径修改为你 ComfyUI 的实际输出目录 !!!
 # 通常是在 ComfyUI 文件夹下的 'output' 文件夹
-COMFYUI_OUTPUT_DIR = r"../../../comfyui/output"
-COMFYUI_INPUT_DIR = r"../../../comfyui/input"
+COMFYUI_OUTPUT_DIR = r"../../../comfyui_v2/ComfyUI/output"
+COMFYUI_INPUT_DIR = r"../../../comfyui_v2/ComfyUI/input"
 
 # 模型配置映射
 MODEL_CONFIGS = {
@@ -43,6 +43,29 @@ MODEL_CONFIGS = {
         'load_image_node': '76',
         'seed_node': '102',
         'save_node': '9'
+    },
+    'minimax_h3_i2v_turbo': {
+        'file': 'minimax_h3_i2v_turbo.json',
+        'prompt_node': '131',
+        'prompt_key': 'prompt',        # 视频节点提示词键为 "prompt"，图片为 "text"
+        'load_image_node': '139',      # 首帧上传注入点（必填）
+        'seed_node': '129',
+        'seed_key': 'noise_seed',
+        'save_node': '92',
+        'duration_node': '133',        # PrimitiveFloat，生成长度（秒）
+        # 无 aspect_ratio_node：分辨率由模板内 GetImageSize 节点按首帧图片自动计算
+        'is_video': True
+    },
+    'minimax_h3_t2v_turbo': {
+        'file': 'minimax_h3_t2v_turbo.json',
+        'prompt_node': '131',
+        'prompt_key': 'prompt',
+        'seed_node': '129',
+        'seed_key': 'noise_seed',
+        'save_node': '92',
+        'duration_node': '133',
+        'aspect_ratio_node': '115',
+        'is_video': True
     }
 }
 

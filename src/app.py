@@ -10,7 +10,7 @@ from src.config import BASE_PATH
 from src.models import db, User
 from src.auth import auth_bp
 from src.routes import main_bp
-from src.comfyui import generate_image
+from src.comfyui import generate_image, get_task_status
 
 
 def create_app():
@@ -31,6 +31,8 @@ def create_app():
 
     # 注册生成图片路由（需要在蓝图之外，因为它需要特殊的处理）
     app.route('/generate', methods=['POST'])(generate_image)
+    # 异步任务状态查询
+    app.route('/api/task/<task_id>', methods=['GET'])(get_task_status)
 
     return app
 
